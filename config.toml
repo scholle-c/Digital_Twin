@@ -12,6 +12,10 @@
 #   risk("feuer")             -> p_12m der Gefahr
 #   event_p("umzug")          -> p_12m des Life Events
 #   drivers("feuer")          -> Liste der Treiber-Namen
+#   similar_p("kind")         -> p_12m aus ähnlichen Kunden (similarity.py)
+#   similar_ids("kind")       -> IDs der ähnlichen Kunden, die das Event hatten
+#   trend("einbrueche")       -> regionaler Trend in %/Jahr (forecast.py), Region = Bundesland
+#   trend_label("einbrueche") -> "steigend (+11 %/Jahr)"
 # In "text" gilt dasselbe, in geschweiften Klammern.
 # ============================================================
 
@@ -37,6 +41,15 @@ factors = [
   { name = "Keller",      when = "house.basement",      factor = 1.5 },
 ]
 
+[hazards.einbruch]
+label = "Einbruch"
+base_per_month = 0.002
+avg_damage_eur = 3500
+factors = [
+  { name = "Erdgeschoss / wenige Stockwerke", when = "house.floors <= 2",   factor = 1.5 },
+  { name = "Regionaler Einbruchtrend steigend", when = "trend('einbrueche') > 10", factor = 1.4 },
+]
+
 [hazards.leitungswasser]
 label = "Leitungswasser"
 base_per_month = 0.003
@@ -60,6 +73,7 @@ factors = [
 label = "Kind"
 base_per_month = 0.01
 factors = [
+  { name = "Ähnliche Kunden hatten Kind", when = "similar_p('kind') >= 0.5",                             factor = 1.8 },
   { name = "Alter 25-38",       when = "25 <= person.age <= 38",                                        factor = 2.0 },
   { name = "Kind < 6 Monate",   when = "days_since('kind') is not None and days_since('kind') < 180",   factor = 0.1 },
 ]
@@ -116,3 +130,10 @@ category = "gap"
 priority = 3
 when = "event_p('umzug') > 0.3"
 text = "Umzug zu {event_p('umzug'):.0%} wahrscheinlich"
+
+[[recommendations]]
+product  = "Einbruchschutz ansprechen"
+category = "prevention"
+priority = 2
+when = "trend('einbrueche') > 10 and risk('einbruch') > 0.03"
+text = "Einbrüche in {person.federal_state} {trend_label('einbrueche')}, Einbruchrisiko {risk('einbruch'):.0%}"
