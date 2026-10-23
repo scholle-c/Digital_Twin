@@ -13,7 +13,7 @@ from i18n import t
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from data_loader import load_customer  # noqa: E402
-from geo_heatmap import METRIC_GROUPS, heat_points_for_step, load_disasters_df, load_incidents_df, render_heatmap  # noqa: E402
+from geo_heatmap import HEAT_RANGE_CONTRAST, METRIC_DISASTERS, METRIC_GROUPS, heat_points_for_step, load_disasters_df, load_incidents_df, render_heatmap  # noqa: E402
 import forecast as fc  # noqa: E402
 
 STATE_CENTERS = {
@@ -54,11 +54,14 @@ def render_region_view(customer_id: str) -> None:
     st.caption(f"**{fc._label(fc.LAST_MONTH, step)}** · {phase}")
 
     points = heat_points_for_step(incidents, metric, step, region_arg)
-    nature = disasters[disasters["country"] == "DE"] if not disasters.empty else disasters
+    # Naturereignisse nur, wenn sie zur Kennzahl passen (bei Einbruch keine)
+    nature = disasters[(disasters["country"] == "DE") & disasters["disaster_type"].isin(METRIC_DISASTERS.get(metric, []))] \
+        if not disasters.empty else disasters
     if region_arg and not nature.empty:
         nature = nature[nature["region"] == region_arg]
     center = STATE_CENTERS.get(region_arg) if region_arg else (51.1, 10.4)
-    render_heatmap(points, nature, home=None, center=center, zoom=6 if region_arg else 4.8, height=420, key="region_map")
+    render_heatmap(points, nature, home=None, center=center, zoom=6 if region_arg else 4.8, height=420, key="region_map",
+                   color_domain=[4, 40], color_range=HEAT_RANGE_CONTRAST, radius_pixels=32)   # feste, kontrastreiche Skala
     st.caption(t("region_map_note"))
 
     # Kennzahlen je Bundesland für den gewählten Monat, sortiert nach Wert

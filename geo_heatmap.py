@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
@@ -42,6 +43,11 @@ DISASTER_LABELS = {
 }
 # Kennzahl aus forecast.py -> Vorfallgruppe auf der Karte
 METRIC_GROUPS = {"einbrueche": "Einbruch & Diebstahl", "feueralarme": "Feuer & Elektro", "wasserschaeden": "Leitungswasser"}
+# Welche Naturereignisse zu welcher Kennzahl passen (Einbruch: keine)
+METRIC_DISASTERS = {"wasserschaeden": ["heavy_rain", "flood", "storm", "hail", "snow_load"],
+                    "feueralarme": ["wildfire", "heatwave"], "einbrueche": []}
+# Kontrastreiche Skala für die Dashboard-Karte (hellblau -> gelb -> orange -> rot)
+HEAT_RANGE_CONTRAST = [[198, 219, 239], [107, 174, 214], [255, 237, 160], [254, 178, 76], [240, 59, 32], [153, 0, 13]]
 
 
 # ---------- Daten ----------
@@ -68,9 +74,83 @@ def load_disasters_df() -> pd.DataFrame:
     return df
 
 
+# ---------- Demo-Punktwolken ----------
+# Städte-Cluster je Bundesland: (lat, lon, Gewicht ~ Größe). Synthetisch, nur für die Kartendichte.
+CITY_CLUSTERS = {
+    "Bayern": [("München", 48.14, 11.58, 1.0), ("Nürnberg", 49.45, 11.08, 0.6), ("Augsburg", 48.37, 10.90, 0.4),
+               ("Würzburg", 49.79, 9.95, 0.3), ("Regensburg", 49.01, 12.10, 0.3), ("Bayreuth", 49.95, 11.58, 0.25)],
+    "Baden-Württemberg": [("Stuttgart", 48.78, 9.18, 0.9), ("Karlsruhe", 49.01, 8.40, 0.4), ("Freiburg", 47.99, 7.85, 0.35),
+                          ("Mannheim", 49.49, 8.47, 0.4), ("Ulm", 48.40, 9.99, 0.25)],
+    "Berlin": [("Berlin", 52.52, 13.40, 1.2)],
+    "Brandenburg": [("Potsdam", 52.40, 13.06, 0.3), ("Cottbus", 51.76, 14.33, 0.2)],
+    "Bremen": [("Bremen", 53.08, 8.80, 0.45)],
+    "Hamburg": [("Hamburg", 53.55, 10.00, 1.0)],
+    "Hessen": [("Frankfurt", 50.11, 8.68, 0.9), ("Kassel", 51.31, 9.49, 0.3), ("Darmstadt", 49.87, 8.65, 0.3)],
+    "Mecklenburg-Vorpommern": [("Rostock", 54.09, 12.14, 0.3), ("Schwerin", 53.63, 11.41, 0.2)],
+    "Niedersachsen": [("Hannover", 52.37, 9.73, 0.7), ("Braunschweig", 52.27, 10.52, 0.35), ("Oldenburg", 53.14, 8.21, 0.3),
+                      ("Osnabrück", 52.28, 8.05, 0.3), ("Göttingen", 51.53, 9.93, 0.25)],
+    "Nordrhein-Westfalen": [("Köln", 50.94, 6.96, 1.0), ("Düsseldorf", 51.23, 6.78, 0.7), ("Dortmund", 51.51, 7.47, 0.6),
+                            ("Essen", 51.46, 7.01, 0.6), ("Münster", 51.96, 7.63, 0.4), ("Bielefeld", 52.02, 8.53, 0.35),
+                            ("Aachen", 50.78, 6.08, 0.3), ("Bonn", 50.74, 7.10, 0.35)],
+    "Rheinland-Pfalz": [("Mainz", 50.00, 8.27, 0.4), ("Koblenz", 50.36, 7.59, 0.3), ("Trier", 49.75, 6.64, 0.25),
+                        ("Bad Neuenahr-Ahrweiler", 50.54, 7.11, 0.2)],
+    "Saarland": [("Saarbrücken", 49.24, 6.99, 0.35)],
+    "Sachsen": [("Leipzig", 51.34, 12.37, 0.7), ("Dresden", 51.05, 13.74, 0.7), ("Chemnitz", 50.83, 12.92, 0.35)],
+    "Sachsen-Anhalt": [("Magdeburg", 52.13, 11.63, 0.35), ("Halle", 51.48, 11.97, 0.3)],
+    "Schleswig-Holstein": [("Kiel", 54.32, 10.14, 0.4), ("Lübeck", 53.87, 10.69, 0.3), ("Flensburg", 54.78, 9.44, 0.2)],
+    "Thüringen": [("Erfurt", 50.98, 11.03, 0.35), ("Jena", 50.93, 11.59, 0.25)],
+}
+POINTS_PER_CITY = 60
+
+
+def _level(metric: str, region: str, step: int) -> float:
+    """Niveau der Kennzahl in der Region für den Zeitschritt (Historie bzw. Prognose), relativ zu heute."""
+    import forecast as fc
+    if region not in fc.regions():
+        return 1.0
+    now = fc.heatmap_frame(metric, 0)[region]
+    then = fc.heatmap_frame(metric, step)[region] if step != 0 else now
+    ratio = (then / now) if now else 1.0
+    return min(max(ratio, 0.4), 2.2)       # begrenzt, damit die Karte deutlich, aber nicht absurd reagiert
+
+
+@st.cache_data(show_spinner=False)
+def demo_points(metric: str, step: int, region: str | None = None) -> pd.DataFrame:
+    """Synthetische Punktwolke um Städte, gewichtet mit dem regionalen Niveau des Zeitschritts.
+
+    Demo-Daten zur Veranschaulichung der Dichte, keine echten Vorfälle. Die Form der Wolke ist fix (Seed),
+    nur die Gewichte ändern sich mit der Zeit, damit die Entwicklung je Region sichtbar wird.
+    """
+    rng = np.random.default_rng(42)
+    rows = []
+    for state, cities in CITY_CLUSTERS.items():
+        if region and state != region:
+            continue
+        level = _level(metric, state, step)
+        for city, lat, lon, size in cities:
+            n = int(POINTS_PER_CITY * size)
+            lats = lat + rng.normal(0, 0.12, n)
+            lons = lon + rng.normal(0, 0.18, n)
+            w = rng.gamma(2.0, 0.5, n) * level ** 2          # Quadrat verstärkt den Unterschied zwischen den Zeitschritten
+            rows += [{"longitude": float(x), "latitude": float(y), "weight": float(v), "region": state,
+                      "tip": f"{city} · Demo-Dichte"} for x, y, v in zip(lons, lats, w)]
+    return pd.DataFrame(rows)
+
+
 # ---------- Zeitschritt ----------
-def heat_points_for_step(incidents: pd.DataFrame, metric: str, step: int, region: str | None = None) -> pd.DataFrame:
-    """Punkte (longitude, latitude, weight, tip) für Monat `step` relativ zu heute (<= 0 Vergangenheit, > 0 Prognose)."""
+def heat_points_for_step(incidents: pd.DataFrame, metric: str, step: int, region: str | None = None,
+                         demo: bool = True) -> pd.DataFrame:
+    """Punkte (longitude, latitude, weight, tip) für Monat `step` relativ zu heute (<= 0 Vergangenheit, > 0 Prognose).
+
+    Mit demo=True kommen zusätzlich synthetische Punktwolken dazu, damit die Karte Fläche hat.
+    """
+    real = _real_points_for_step(incidents, metric, step, region)
+    if not demo:
+        return real
+    return pd.concat([demo_points(metric, step, region), real.assign(weight=real["weight"] * 3)], ignore_index=True)
+
+
+def _real_points_for_step(incidents: pd.DataFrame, metric: str, step: int, region: str | None = None) -> pd.DataFrame:
     group = METRIC_GROUPS[metric]
     data = incidents[incidents["group"] == group]
     if region:
@@ -91,16 +171,23 @@ def heat_points_for_step(incidents: pd.DataFrame, metric: str, step: int, region
 # ---------- Karte ----------
 def render_heatmap(points: pd.DataFrame, nature: pd.DataFrame | None = None, home: tuple[float, float] | None = None,
                    center: tuple[float, float] | None = None, zoom: float | None = None, height: int = 380,
-                   key: str | None = None) -> None:
-    """Zeichnet die Heatmap. points braucht longitude, latitude, weight, tip."""
+                   key: str | None = None, color_domain: list[float] | None = None, markers: bool = True,
+                   color_range: list[list[int]] | None = None, radius_pixels: int = 45) -> None:
+    """Zeichnet die Heatmap. points braucht longitude, latitude, weight, tip.
+
+    color_domain fixiert die Farbskala (z. B. [0, 40]); ohne Angabe normalisiert pydeck pro Ansicht,
+    dann sehen alle Zeitschritte gleich aus. markers=False blendet die Einzelpunkte aus (Demo-Wolken).
+    """
     layers = []
     if not points.empty:
-        layers += [
-            pdk.Layer("HeatmapLayer", points, get_position=["longitude", "latitude"], get_weight="weight",
-                      radius_pixels=45, color_range=HEAT_RANGE, opacity=0.75),
-            pdk.Layer("ScatterplotLayer", points, get_position=["longitude", "latitude"], get_radius=1800,
-                      radius_min_pixels=3, get_fill_color=[16, 66, 129, 170], pickable=True),
-        ]
+        heat_kwargs = {"color_domain": color_domain} if color_domain else {}
+        layers.append(pdk.Layer("HeatmapLayer", points, get_position=["longitude", "latitude"], get_weight="weight",
+                                radius_pixels=radius_pixels, color_range=color_range or HEAT_RANGE, opacity=0.8,
+                                aggregation="SUM", **heat_kwargs))
+        marker_points = points[~points["tip"].str.contains("Demo-Dichte", na=False)] if markers else points.iloc[0:0]
+        if not marker_points.empty:
+            layers.append(pdk.Layer("ScatterplotLayer", marker_points, get_position=["longitude", "latitude"],
+                                    get_radius=1800, radius_min_pixels=3, get_fill_color=[16, 66, 129, 170], pickable=True))
     if home:
         layers.append(pdk.Layer("ScatterplotLayer", pd.DataFrame([{"lon": home[1], "lat": home[0], "tip": "Wohnort"}]),
                                 get_position=["lon", "lat"], get_radius=2500, radius_min_pixels=7,

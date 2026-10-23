@@ -27,14 +27,21 @@ BUILDING_TYPES = {
 }
 
 
-@st.cache_data(ttl=10, show_spinner=False)
-def _portfolio() -> Portfolio:
+# Das Portfolio wird nur neu berechnet, wenn sich eine CSV in generated_demodata ändert
+# (vorher: alle 10 s, bei 250 Kunden ein Dauer-Lag von 40+ s).
+def _data_stamp() -> float:
+    folder = Path(__file__).resolve().parents[2] / "generated_demodata"
+    return max((f.stat().st_mtime for f in folder.glob("*.csv")), default=0.0)
+
+
+@st.cache_data(show_spinner="Digital Twins werden berechnet …")
+def _portfolio(stamp: float) -> Portfolio:
     return build_portfolio()
 
 
 def render_twin_comparison(customer_id: str) -> None:
     """Kennzahlen, Position im Bestand, Twin-Landkarte und ähnlichste Twins."""
-    portfolio = _portfolio()
+    portfolio = _portfolio(_data_stamp())
     if customer_id not in portfolio.snapshots:
         st.info(t("not_specified"))
         return

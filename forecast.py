@@ -31,6 +31,14 @@ METRICS = {
 _customers = None
 _incidents = None
 
+# Trend-Multiplikator je Bundesland (Demo-Annahme, frei änderbar). 1.0 = Basistrend aus METRICS.
+REGION_TREND = {
+    "Bayern": 3.0, "Nordrhein-Westfalen": 2.5, "Berlin": 2.0, "Hessen": 1.5,
+    "Baden-Württemberg": 1.0, "Niedersachsen": 0.5, "Sachsen": 0.0, "Hamburg": -0.3,
+    "Schleswig-Holstein": -0.6, "Bremen": -0.8, "Rheinland-Pfalz": -1.0,
+    "Brandenburg": 1.0, "Thüringen": 0.0, "Sachsen-Anhalt": -0.5, "Saarland": 0.5, "Mecklenburg-Vorpommern": 0.0,
+}
+
 
 def regions() -> list[str]:
     """Bundesländer, in denen Kunden wohnen, alphabetisch."""
@@ -50,10 +58,13 @@ def history(metric: str, region: str) -> np.ndarray:
     base, trend, season_amp, noise, incident_types = METRICS[metric]
     rng = np.random.default_rng(zlib.crc32(f"{metric}|{region}".encode()))   # deterministisch über Prozesse
     region_factor = 1 + 0.3 * (regions().index(region) % 4) if region in regions() else 1.0
+    # Demo: Regionen entwickeln sich unterschiedlich (stark steigend, leicht steigend, stabil, fallend),
+    # damit Vergangenheit und Prognose auf der Karte sichtbar auseinanderlaufen.
+    region_trend = REGION_TREND.get(region, 1.0)
     t = np.arange(HISTORY_MONTHS)
     months = (t + _month_index(LAST_MONTH) - HISTORY_MONTHS + 1) % 12
     season = season_amp * np.cos(2 * np.pi * months / 12)
-    y = base * region_factor + trend * t + season + rng.normal(0, noise, HISTORY_MONTHS)
+    y = base * region_factor + trend * region_trend * t + season + rng.normal(0, noise, HISTORY_MONTHS)
 
     if incident_types:
         if _incidents is None:
@@ -84,7 +95,7 @@ def forecast(metric: str, region: str, steps: int = 6) -> list[dict]:
     out = []
     for h in range(1, steps + 1):
         t = len(y) - 1 + h
-        value = slope * t + intercept + season[(_month_index(LAST_MONTH) + h) % 12]
+        value = max(slope * t + intercept + season[(_month_index(LAST_MONTH) + h) % 12], 0.0)
         band = 1.96 * resid_std * np.sqrt(1 + h / len(y))
         out.append({"month": _label(LAST_MONTH, h), "value": round(float(value), 2),
                     "lo": round(float(max(value - band, 0)), 2), "hi": round(float(value + band), 2)})

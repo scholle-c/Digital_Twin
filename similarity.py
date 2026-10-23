@@ -10,8 +10,20 @@ Life-Event-Prediction über ähnliche Kunden (k nächste Nachbarn).  Nutzt data_
   3. Anteil der k ähnlichsten Kunden mit dem Event in den letzten 12 Monaten, gewichtet nach Ähnlichkeit.
      Beim Vorhersagen von Event X wird das Merkmal had_X weggelassen (Leakage).
 """
-from data_loader import load_all_customers
+from data_loader import DATA_FOLDER, load_all_customers
 from models import TODAY, Customer, SimilarityPrediction
+
+# Alle Kunden werden einmal geladen und wiederverwendet, bis sich eine CSV ändert.
+# Ohne diesen Cache liest jeder Twin alle CSVs neu (bei 250 Kunden: 250 x 0,2 s pro Portfolio-Aufbau).
+_customers_cache: dict = {"stamp": None, "customers": None}
+
+
+def all_customers() -> dict[str, Customer]:
+    """Gecachte Kundenliste; lädt neu, sobald eine CSV in generated_demodata geändert wurde."""
+    stamp = max((f.stat().st_mtime for f in DATA_FOLDER.glob("*.csv")), default=None)
+    if _customers_cache["stamp"] != stamp:
+        _customers_cache.update(stamp=stamp, customers=load_all_customers())
+    return _customers_cache["customers"]
 
 EVENT_TYPES = ["kind", "auto"]
 WINDOW_DAYS = 730   # Demo-Daten: nur 1 Event pro Kunde, daher 24 Monate; bei echten Daten 365
@@ -56,7 +68,7 @@ def similarity(a: dict, b: dict, ranges: dict, exclude: str | None = None) -> fl
 
 def predict_events(customer_id: str, k: int = 5, customers: dict[str, Customer] | None = None,
                    events: list[str] = EVENT_TYPES) -> dict[str, SimilarityPrediction]:
-    customers = customers or load_all_customers()
+    customers = customers or all_customers()
     feats = {cid: features(c) for cid, c in customers.items()}
     ranges = {f: max(v[f] for v in feats.values()) - min(v[f] for v in feats.values())
               for f, (kind, _) in FEATURES.items() if kind == "num"}
@@ -80,7 +92,7 @@ def predict_events(customer_id: str, k: int = 5, customers: dict[str, Customer] 
 if __name__ == "__main__":
     import sys
     cid = sys.argv[1] if len(sys.argv) > 1 else "C0010"
-    c = load_all_customers()[cid]
+    c = all_customers()[cid]
     print(f"{cid}: {c.person.age} J., {c.person.relationship_status}, {c.person.city}, {c.house.building_type}\n")
     for ev, p in predict_events(cid).items():
         print(f"{ev.upper():5} in 12 Monaten: {p.p_12m:.0%}")
