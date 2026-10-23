@@ -1,0 +1,118 @@
+# ============================================================
+# Digital Twin Konfiguration
+# Alle Raten, Faktoren, Regeln und Texte. Kein Python nötig.
+#
+# In "when"-Ausdrücken verfügbar:
+#   person.age, person.age_group, person.occupation, person.financial_situation, person.contracts
+#   house.year, house.riskzone, house.basement, house.building_type, house.floors
+#   iot.smoke_detector, iot.alarms_last(tage), iot.battery_warning
+#   TODAY, days_ago(datum)      -> Tage seit datum
+#   has("produkt")            -> True/False
+#   days_since("event")       -> Tage oder None
+#   risk("feuer")             -> p_12m der Gefahr
+#   event_p("umzug")          -> p_12m des Life Events
+#   drivers("feuer")          -> Liste der Treiber-Namen
+# In "text" gilt dasselbe, in geschweiften Klammern.
+# ============================================================
+
+# ---------- GEFAHREN: Basisrate pro Monat x Faktoren ----------
+[hazards.feuer]
+label = "Feuer"
+base_per_month = 0.001
+avg_damage_eur = 15000
+factors = [
+  { name = "kein Rauchmelder",            when = "not iot.smoke_detector",                 factor = 3.0 },
+  { name = "2+ Alarme in 90 Tagen",       when = "iot.alarms_last(90) >= 2",               factor = 2.5 },
+  { name = "Batteriewarnung unbeachtet",  when = "iot.battery_warning is not None and days_ago(iot.battery_warning) > 14", factor = 1.5 },
+  { name = "Baujahr < 1970",              when = "house.year < 1970",                      factor = 1.5 },
+]
+
+[hazards.hochwasser]
+label = "Hochwasser / Starkregen"
+base_per_month = 0.0005
+avg_damage_eur = 8000
+factors = [
+  { name = "ZÜRS-Zone 3", when = "house.riskzone == 3", factor = 4.0 },
+  { name = "ZÜRS-Zone 4", when = "house.riskzone == 4", factor = 10.0 },
+  { name = "Keller",      when = "house.basement",      factor = 1.5 },
+]
+
+[hazards.leitungswasser]
+label = "Leitungswasser"
+base_per_month = 0.003
+avg_damage_eur = 3000
+factors = [
+  { name = "Baujahr < 1980", when = "house.year < 1980", factor = 2.0 },
+  { name = "Keller",         when = "house.basement",    factor = 1.5 },
+]
+
+# ---------- LIFE EVENTS: welche kommen wahrscheinlich? ----------
+[life_events.umzug]
+label = "Umzug"
+base_per_month = 0.01
+factors = [
+  { name = "Alter 20-35",            when = "20 <= person.age <= 35",                                   factor = 2.0 },
+  { name = "Wohnung (Mieter-Proxy)", when = "house.building_type == 'apartment'",                      factor = 1.5 },
+  { name = "Kind < 1 Jahr",          when = "days_since('kind') is not None and days_since('kind') < 365", factor = 2.5 },
+]
+
+[life_events.kind]
+label = "Kind"
+base_per_month = 0.01
+factors = [
+  { name = "Alter 25-38",       when = "25 <= person.age <= 38",                                        factor = 2.0 },
+  { name = "Kind < 6 Monate",   when = "days_since('kind') is not None and days_since('kind') < 180",   factor = 0.1 },
+]
+
+[life_events.auto]
+label = "Auto"
+base_per_month = 0.01
+factors = [
+  { name = "Kind < 1 Jahr",          when = "days_since('kind') is not None and days_since('kind') < 365", factor = 2.0 },
+  { name = "Auto < 3 Monate",        when = "days_since('auto') is not None and days_since('auto') < 90",  factor = 0.2 },
+  { name = "Finanzen high",          when = "person.financial_situation == 'high'",                      factor = 1.5 },
+]
+
+# ---------- EMPFEHLUNGEN: Regel -> Produkt + Text ----------
+# category: prevention (Schaden verhindern) > gap (Deckungslücke) > cross_sell
+[[recommendations]]
+product  = "Familienhaftpflicht"
+category = "cross_sell"
+priority = 1
+when = "days_since('kind') is not None and days_since('kind') < 365 and not has('haftpflicht_familie')"
+text = "Kind vor {days_since('kind')} Tagen geboren, Haftpflicht ist nicht auf Familie umgestellt"
+
+[[recommendations]]
+product  = "Kfz-Versicherung"
+category = "cross_sell"
+priority = 1
+when = "days_since('auto') is not None and days_since('auto') < 90 and not has('kfz')"
+text = "Auto vor {days_since('auto')} Tagen gekauft, keine Kfz-Police"
+
+[[recommendations]]
+product  = "Elementarbaustein"
+category = "gap"
+priority = 2
+when = "risk('hochwasser') > 0.02 and not has('elementar')"
+text = "Hochwasserrisiko {risk('hochwasser'):.0%} in 12 Monaten, Treiber: {', '.join(drivers('hochwasser'))}"
+
+[[recommendations]]
+product  = "Rauchmelder prüfen"
+category = "prevention"
+priority = 1
+when = "risk('feuer') > 0.02"
+text = "Feuerrisiko {risk('feuer'):.0%}, Treiber: {', '.join(drivers('feuer'))}"
+
+[[recommendations]]
+product  = "Wassersensor anbieten"
+category = "prevention"
+priority = 2
+when = "risk('leitungswasser') > 0.08 and not has('wassersensor')"
+text = "Leitungswasserrisiko {risk('leitungswasser'):.0%}, Treiber: {', '.join(drivers('leitungswasser'))}"
+
+[[recommendations]]
+product  = "Hausrat-Summe bald prüfen"
+category = "gap"
+priority = 3
+when = "event_p('umzug') > 0.3"
+text = "Umzug zu {event_p('umzug'):.0%} wahrscheinlich"
