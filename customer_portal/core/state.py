@@ -11,7 +11,7 @@ from datetime import datetime
 
 import streamlit as st
 
-from core.data import DEMO_LOGIN, initial_notifications, initial_policies, initial_profile
+from core.data import DEMO_PASSWORD, customer_ids, home_coords, initial_notifications, initial_policies, initial_profile, save_profile_to_csv
 
 # Seiten des Portals: Schlüssel -> (Titel, Material-Icon).
 PAGES = {
@@ -31,9 +31,10 @@ def init_state() -> None:
     """Initialisiert den Sitzungszustand mit Demodaten."""
     defaults = {
         "authenticated": False,
+        "customer_id": None,
         "page": "home",
-        "profile": initial_profile(),
-        "policies": initial_policies(),
+        "profile": {},
+        "policies": [],
         "answers": {},
         "q_draft": {},
         "q_step": 0,
@@ -59,20 +60,34 @@ def init_state() -> None:
 # Anmeldung (nur Demo, keine echte Authentifizierung)
 # ------------------------------------------------------------
 
-# Prüft die Demo-Zugangsdaten. Kundennummer oder E-Mail werden akzeptiert.
-def check_login(identifier: str, password: str) -> bool:
-    """Gibt True zurück, wenn die Eingaben dem Demo-Zugang entsprechen."""
-    ident = identifier.strip().lower()
-    return ident in (DEMO_LOGIN["customer_number"].lower(), DEMO_LOGIN["email"]) and password == DEMO_LOGIN["password"]
+# Prüft Kunden-ID (aus customers.csv) und das feste Demo-Passwort.
+def check_login(identifier: str, password: str) -> str | None:
+    """Gibt die Kunden-ID zurück, wenn sie existiert und das Passwort stimmt, sonst None."""
+    ident = identifier.strip().upper()
+    if ident.isdigit():                       # "10" -> "C0010"
+        ident = f"C{int(ident):04d}"
+    if password == DEMO_PASSWORD and ident in customer_ids():
+        return ident
+    return None
 
 
-# Meldet den Demokunden an und lädt die Mitteilungen.
-def login() -> None:
-    """Setzt den Anmeldestatus und öffnet die Übersicht."""
+# Meldet einen Kunden an: Profil, Verträge und Mitteilungen werden für diese ID geladen.
+def login(customer_id: str) -> None:
+    """Lädt die Daten des Kunden aus den CSV-Dateien und öffnet die Übersicht."""
+    if st.session_state.customer_id != customer_id:
+        for key in ("answers", "q_draft", "dismissed_offers", "requested_offers"):
+            st.session_state[key] = {} if key in ("answers", "q_draft") else []
+        st.session_state.q_step, st.session_state.q_submitted = 0, False
+        st.session_state.notifications = []
+    st.session_state.customer_id = customer_id
+    st.session_state.profile = initial_profile(customer_id)
+    st.session_state.policies = initial_policies()
     st.session_state.authenticated = True
     st.session_state.page = "home"
     if not st.session_state.notifications:
-        st.session_state.notifications = initial_notifications(st.session_state.profile["postal_code"])
+        profile = st.session_state.profile
+        coords = home_coords(profile["postal_code"], profile["federal_state"])
+        st.session_state.notifications = initial_notifications(profile["postal_code"], coords)
 
 
 # Meldet ab; der Demo-Zustand (Profil, Antworten) bleibt für die nächste Anmeldung erhalten.
@@ -192,8 +207,9 @@ def save_profile(changes: dict) -> None:
     st.session_state.profile.update(changes)
     if "children" in changes and st.session_state.answers:
         st.session_state.answers["children"] = changes["children"]
+    save_profile_to_csv(st.session_state.profile)          # zurück in die CSV-Dateien (Source of Truth)
     st.session_state.edit_section = None
-    notify("Profil gespeichert")
+    notify("Profil gespeichert und in die Kundendaten übernommen")
 
 
 # ------------------------------------------------------------

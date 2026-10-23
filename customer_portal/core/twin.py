@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import streamlit as st
 
-from core.data import DEMO_CUSTOMER_ID, DEMO_DIR, ROOT
+from core.data import DEMO_DIR, ROOT
 
 
 # Ergebnis des Twins in einfachen, cachebaren Strukturen.
@@ -25,9 +25,9 @@ class TwinResult:
     recommendations: tuple[tuple[int, str, str, str], ...]
 
 
-# Ruft den Digital Twin auf. Gecacht je Kombination aus Verträgen und Rauchmelder-Angabe.
+# Ruft den Digital Twin auf. Gecacht je Kunde, Verträgen und Rauchmelder-Angabe.
 @st.cache_data(show_spinner=False)
-def run_twin(contracts: tuple[str, ...], smoke_detector: bool) -> TwinResult | None:
+def run_twin(customer_id: str, contracts: tuple[str, ...], smoke_detector: bool) -> TwinResult | None:
     """Berechnet Risiken und Empfehlungen; None, falls der Twin nicht geladen werden kann."""
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
@@ -37,7 +37,7 @@ def run_twin(contracts: tuple[str, ...], smoke_detector: bool) -> TwinResult | N
         from models import IoT
 
         customer = load_customer(
-            DEMO_CUSTOMER_ID, folder=DEMO_DIR, iot=IoT(smoke_detector=smoke_detector), contracts=list(contracts)
+            customer_id, folder=DEMO_DIR, iot=IoT(smoke_detector=smoke_detector), contracts=list(contracts)
         )
         twin = DigitalTwin(customer, config_path=str(ROOT / "config.toml"))
         return TwinResult(
@@ -48,4 +48,26 @@ def run_twin(contracts: tuple[str, ...], smoke_detector: bool) -> TwinResult | N
             recommendations=tuple((r.priority, r.category, r.product, r.reason) for r in twin.recommendations()),
         )
     except Exception:  # noqa: BLE001 – Prototyp: Twin-Fehler dürfen das Portal nicht blockieren
+        return None
+
+
+# Regionale Zeitreihe + Prognose aus forecast.py des Projekts. Gecacht je Region, Kennzahl und Horizont.
+@st.cache_data(show_spinner=False)
+def load_forecast(region: str, metric: str, steps: int) -> dict | None:
+    """Gibt Historie, Prognose (mit Band) und Trendlabel zurück; None, wenn die Region unbekannt ist."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    try:
+        import forecast as fc
+
+        if region not in fc.regions():
+            return None
+        values = fc.history(metric, region).tolist()
+        months = [fc._label(fc.LAST_MONTH, h) for h in range(-len(values) + 1, 1)]
+        return {
+            "history": [{"month": m, "value": round(v, 2)} for m, v in zip(months, values)],
+            "forecast": fc.forecast(metric, region, steps),
+            "trend": fc.trend_label(metric, region),
+        }
+    except Exception:  # noqa: BLE001
         return None

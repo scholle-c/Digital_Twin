@@ -24,7 +24,9 @@ uv run streamlit run app.py
 
 Wichtig: im Ordner `customer_portal/` starten, damit `.streamlit/config.toml` (helles Design) greift.
 
-**Demo-Zugang:** Kundennummer `DT-100010` oder `max.bauer@example.com`, Passwort `demo`.
+**Demo-Zugang:** eine Kunden-ID aus `generated_demodata/customers.csv` (z. B. `C0010`), Passwort `demo`.
+Profil und Lebenslage kommen aus den CSV-Dateien; Änderungen im Profil werden nach `customers.csv`
+und `portal_profiles.csv` zurückgeschrieben. Verträge sind weiterhin fiktiv.
 Es gibt keine echte Authentifizierung – bitte keine echten Zugangsdaten eingeben.
 
 ## Seiten

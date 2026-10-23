@@ -13,7 +13,8 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
-from core.data import HOME_COORDS, TODAY, load_age_group_claims, load_disasters, load_incidents
+from core.data import TODAY, home_coords, load_age_group_claims, load_disasters, load_incidents
+from core.twin import load_forecast
 from ui.components import empty_state, esc, euro, icon, page_header, render_html
 
 # Feste Farbe je Risikokategorie (Farbe folgt der Kategorie, nicht dem Rang). Geprüfte Reihenfolge.
@@ -27,6 +28,8 @@ GROUP_COLORS = {
 # Einfarbige Skala (hell -> dunkel) für die Heatmap.
 HEAT_RANGE = [[205, 226, 251], [158, 197, 244], [109, 167, 236], [57, 135, 229], [37, 106, 191], [16, 66, 129]]
 PERIODS = {"Letzte 3 Monate": 3, "Letzte 6 Monate": 6, "Letzte 12 Monate": 12, "Letzte 24 Monate": 24}
+# Kennzahlen aus forecast.py, die für Kundinnen und Kunden relevant sind (Schlüssel -> Anzeigename).
+FORECAST_METRICS = {"einbrueche": "Einbruch & Diebstahl", "feueralarme": "Feuer & Elektro", "wasserschaeden": "Leitungswasser"}
 AXIS = {"labelColor": "#475569", "titleColor": "#475569", "gridColor": "#E2E8F0", "domainColor": "#CBD5E1",
         "labelFont": "Inter", "titleFont": "Inter"}
 
@@ -47,7 +50,8 @@ def render(ctx: dict) -> None:
 
     # Filterzeile über allen Diagrammen.
     regions = ["Deutschland gesamt"] + sorted(incidents["region"].unique())
-    home_region = "Bayern" if "Bayern" in regions else regions[0]
+    home_state = st.session_state.profile.get("federal_state", "")
+    home_region = home_state if home_state in regions else regions[0]
     f1, f2, f3 = st.columns([1, 1, 2])
     region = f1.selectbox("Region", regions, index=regions.index(home_region), key="trf_region")
     period = f2.selectbox("Zeitraum", list(PERIODS), index=2, key="trf_period")
@@ -72,6 +76,9 @@ def render(ctx: dict) -> None:
             _heatmap(data, nature, region)
         with chart_col, st.container(key="tr_trend"):
             _trend_chart(data, groups, months)
+
+    with st.container(key="tr_forecast"):
+        _forecast_section(region, home_state)
 
     demo_col, twin_col = st.columns(2, gap="medium")
     with demo_col, st.container(key="tr_demo"):
@@ -107,7 +114,7 @@ def _heatmap(data: pd.DataFrame, nature: pd.DataFrame, region: str) -> None:
         pdk.Layer("ScatterplotLayer", points.assign(tip=points["label"] + " · " + points["city"]),
                   get_position=["longitude", "latitude"], get_radius=1800, radius_min_pixels=3,
                   get_fill_color=[16, 66, 129, 170], pickable=True),
-        pdk.Layer("ScatterplotLayer", pd.DataFrame([{"lon": HOME_COORDS[1], "lat": HOME_COORDS[0], "tip": "Ihr Wohnort"}]),
+        pdk.Layer("ScatterplotLayer", pd.DataFrame([{"lon": _home()[1], "lat": _home()[0], "tip": "Ihr Wohnort"}]),
                   get_position=["lon", "lat"], get_radius=2500, radius_min_pixels=7, get_fill_color=[0, 55, 129, 255],
                   get_line_color=[255, 255, 255], line_width_min_pixels=2, stroked=True, pickable=True),
     ]
@@ -132,6 +139,45 @@ def _heatmap(data: pd.DataFrame, nature: pd.DataFrame, region: str) -> None:
         '<span><i class="dt-sw dt-sw-alert"></i>Naturereignis aktiv/erwartet</span>'
         '<span><i class="dt-sw dt-sw-past"></i>Naturereignis vergangen</span></div>'
     )
+
+
+# Prognose: beobachtete Monatswerte, Trend-Vorhersage und Unsicherheitsband aus forecast.py.
+def _forecast_section(region: str, home_state: str) -> None:
+    """Zeigt die Entwicklung einer Risikokennzahl in der Region und die Prognose für die nächsten Monate."""
+    # Bei "Deutschland gesamt" zeigt die Prognose das Bundesland des Kunden (Zeitreihen gibt es nur je Bundesland).
+    target = region if region != "Deutschland gesamt" else home_state
+    render_html(f'<h3 class="dt-h3">Prognose für {esc(target)}</h3>'
+                '<p class="dt-tiny">Beobachtete Monatswerte und Trend-Vorhersage (lineare Regression mit Saisonalität). '
+                'Modellschätzung, keine Garantie.</p>')
+    c1, c2 = st.columns([1, 1])
+    metric_label = c1.selectbox("Kennzahl", list(FORECAST_METRICS.values()), key="trf_metric")
+    metric = next(k for k, v in FORECAST_METRICS.items() if v == metric_label)
+    steps = c2.slider("Monate in die Zukunft", 3, 12, 6, key="trf_steps")
+    result = load_forecast(target, metric, steps)
+    if not result:
+        empty_state("Keine Prognose verfügbar", f"Für {target} liegen keine regionalen Zeitreihen vor.", "trending_flat")
+        return
+
+    hist = pd.DataFrame(result["history"]).tail(18).assign(Art="Beobachtet")
+    fc = pd.DataFrame(result["forecast"]).assign(Art="Prognose")
+    bridge = hist.tail(1).assign(Art="Prognose")                       # verbindet die Linien
+    lines = pd.concat([hist, bridge, fc]).rename(columns={"month": "Monat", "value": "Wert"})
+    band = fc.rename(columns={"month": "Monat"})
+    domain = list(lines["Monat"].unique())
+    base_x = alt.X("Monat:O", title=None, sort=domain, axis=alt.Axis(labelAngle=-45))
+    area = alt.Chart(band).mark_area(color="#2a78d6", opacity=0.15).encode(x=base_x, y="lo:Q", y2="hi:Q")
+    line = alt.Chart(lines).mark_line(point=True).encode(
+        x=base_x, y=alt.Y("Wert:Q", title="Vorfälle pro Monat"),
+        color=alt.Color("Art:N", scale=alt.Scale(domain=["Beobachtet", "Prognose"], range=["#334155", "#2a78d6"]),
+                        legend=alt.Legend(orient="bottom", title=None, labelFont="Inter")),
+        strokeDash=alt.condition(alt.datum.Art == "Prognose", alt.value([6, 4]), alt.value([1, 0])),
+        tooltip=["Monat:O", alt.Tooltip("Wert:Q", format=".1f"), "Art:N"],
+    )
+    chart = (area + line).properties(height=280).configure_axis(**AXIS).configure_view(strokeWidth=0).configure(background="#FFFFFF")
+    st.altair_chart(chart, use_container_width=True)
+    last, end = fc.iloc[0], fc.iloc[-1]
+    render_html(f'<p class="dt-tiny"><b>Trend:</b> {esc(result["trend"])} · In {steps} Monaten erwartet: '
+                f'{end["value"]:.1f} (Band {end["lo"]:.1f} bis {end["hi"]:.1f}) · Nächster Monat: {last["value"]:.1f}</p>')
 
 
 # Gestapelte Balken: Vorfälle je Monat bzw. Quartal und Kategorie.
@@ -220,3 +266,9 @@ def _personal_risk(ctx: dict) -> None:
     st.altair_chart(chart, use_container_width=True)
     events = "".join(f"<li><span>{esc(label)}</span><b>{p:.0%}</b></li>" for _, label, p in twin.events)
     render_html(f'<h4 class="dt-h4">Wahrscheinliche Lebensereignisse</h4><ul class="dt-kv">{events}</ul>')
+
+
+def _home() -> tuple[float, float]:
+    """Koordinaten des Wohnorts des angemeldeten Kunden."""
+    profile = st.session_state.profile
+    return home_coords(profile["postal_code"], profile.get("federal_state", ""))

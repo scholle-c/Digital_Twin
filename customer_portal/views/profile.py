@@ -11,13 +11,13 @@ from datetime import date
 
 import streamlit as st
 
-from core.data import OCCUPATIONS, RELATIONSHIP, TODAY
+from core.data import INTERESTS, OCCUPATIONS, RELATIONSHIP, TODAY
 from core.state import edit_section, navigate, save_profile
 from ui.components import badge, esc, icon, page_header, render_html
 
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PHONE = re.compile(r"^\+?[\d\s/()-]{7,20}$")
-INTEREST_OPTIONS = ["Radfahren", "Heimwerken", "Technik", "Reisen", "Wandern", "Kochen", "Musik", "Sport", "Garten", "Haustiere"]
+INTEREST_OPTIONS = list(INTERESTS.values())
 CHANNELS = ["E-Mail", "App-Benachrichtigung", "Telefon", "Post"]
 
 
@@ -30,7 +30,7 @@ def render(ctx: dict) -> None:
     render_html(
         f'<div class="dt-profile-hero"><span class="dt-avatar">{esc(initials)}</span><div>'
         f'<div class="dt-profile-name">{esc(profile["first_name"])} {esc(profile["last_name"])}</div>'
-        f'<div class="dt-muted">Kundennummer {esc(profile["customer_number"])} · Kunde seit 2022</div></div>'
+        f'<div class="dt-muted">Kunden-ID {esc(profile["customer_id"])} · Kunde seit {profile["customer_since"].year}</div></div>'
         f'{badge("Identität bestätigt", "ok", "verified")}</div>'
     )
     left, right = st.columns([1.15, 1], gap="medium")

@@ -1,9 +1,9 @@
 """
 Demo- und Stammdaten des Kundenportals.
 
-Der Demokunde „Max Bauer“ basiert auf Kunde C0010 aus generated_demodata/customers.csv.
-Name, Adresse, Kontaktdaten und Verträge sind frei erfunden. Regionale Vorfälle und
-Naturereignisse stammen aus den synthetischen CSV-Dateien des Projekts.
+Profil, Lebenslage und Region kommen aus generated_demodata/customers.csv und life_events.csv.
+Name, Adresse und Kontaktdaten gibt es dort nicht; sie werden fiktiv erzeugt und beim Speichern
+in portal_profiles.csv abgelegt. Verträge sind weiterhin fiktiv (keine Vertrags-CSV vorhanden).
 """
 from __future__ import annotations
 
@@ -23,68 +23,176 @@ DEMO_DIR = ROOT / "generated_demodata"
 # Stichtag des Prototyps; identisch mit TODAY in models.py.
 TODAY = date(2026, 10, 23)
 
-# Demo-Zugang. Bewusst offen dokumentiert – es werden keine echten Zugangsdaten verarbeitet.
-DEMO_CUSTOMER_ID = "C0010"
-DEMO_LOGIN = {"customer_number": "DT-100010", "email": "max.bauer@example.com", "password": "demo"}
+# Demo-Zugang: jede Kunden-ID aus customers.csv (z. B. C0010) mit dem festen Passwort "demo".
+DEMO_PASSWORD = "demo"
 
-# Koordinaten des Wohnorts für Umkreisberechnungen (Würzburg).
-HOME_COORDS = (49.7913, 9.9534)
+# Mittelpunkte der Bundesländer als Rückfall für den Wohnort, wenn keine PLZ-Koordinaten bekannt sind.
+STATE_CENTERS = {
+    "Baden-Württemberg": (48.66, 9.35), "Bayern": (48.95, 11.40), "Berlin": (52.52, 13.40),
+    "Brandenburg": (52.45, 13.40), "Bremen": (53.08, 8.80), "Hamburg": (53.55, 10.00),
+    "Hessen": (50.60, 9.00), "Mecklenburg-Vorpommern": (53.75, 12.50), "Niedersachsen": (52.75, 9.40),
+    "Nordrhein-Westfalen": (51.45, 7.60), "Rheinland-Pfalz": (49.95, 7.40), "Saarland": (49.40, 6.95),
+    "Sachsen": (51.05, 13.40), "Sachsen-Anhalt": (52.00, 11.70), "Schleswig-Holstein": (54.20, 9.80),
+    "Thüringen": (50.90, 11.00),
+}
 
 
 # ------------------------------------------------------------
 # Profil
 # ------------------------------------------------------------
 
-# Übersetzt Codes aus den CSV-Dateien in lesbare deutsche Begriffe.
+# Übersetzt Codes aus den CSV-Dateien in lesbare deutsche Begriffe (vollständig für customers.csv).
 OCCUPATIONS = {
-    "engineer": "Ingenieur/in", "office_worker": "Bürokaufmann/-frau", "student": "Student/in",
-    "retired": "Rentner/in", "teacher": "Lehrer/in", "manager": "Führungskraft",
-    "self_employed": "Selbstständig", "healthcare_worker": "Gesundheitswesen",
+    "apprentice": "Auszubildende/r", "craft_worker": "Handwerker/in", "designer": "Designer/in",
+    "engineer": "Ingenieur/in", "healthcare_worker": "Gesundheitswesen", "manager": "Führungskraft",
+    "office_worker": "Bürokaufmann/-frau", "public_sector": "Öffentlicher Dienst", "retail_worker": "Einzelhandel",
+    "retired": "Rentner/in", "sales": "Vertrieb", "self_employed": "Selbstständig",
+    "skilled_worker": "Facharbeiter/in", "student": "Student/in", "teacher": "Lehrer/in",
 }
 RELATIONSHIP = {
     "married": "Verheiratet", "partnership": "In Partnerschaft", "single": "Ledig",
     "divorced": "Geschieden", "widowed": "Verwitwet",
 }
 INTERESTS = {
-    "cycling": "Radfahren", "home_improvement": "Heimwerken", "technology": "Technik",
-    "travel": "Reisen", "hiking": "Wandern", "cooking": "Kochen", "music": "Musik",
+    "art": "Kunst", "camping": "Camping", "cars": "Autos", "cooking": "Kochen", "cycling": "Radfahren",
+    "fashion": "Mode", "fishing": "Angeln", "fitness": "Fitness", "football": "Fußball", "gaming": "Gaming",
+    "gardening": "Garten", "golf": "Golf", "hiking": "Wandern", "home_improvement": "Heimwerken",
+    "horse_riding": "Reiten", "motorcycling": "Motorrad", "music": "Musik", "online_shopping": "Online-Shopping",
+    "pets": "Haustiere", "photography": "Fotografie", "reading": "Lesen", "running": "Laufen",
+    "sailing": "Segeln", "skiing": "Skifahren", "technology": "Technik", "travel": "Reisen",
+    "wine": "Wein", "yoga": "Yoga",
 }
+# Rückübersetzung deutsch -> CSV-Code für das Speichern.
+OCCUPATION_CODES = {v: k for k, v in OCCUPATIONS.items()}
+RELATIONSHIP_CODES = {v: k for k, v in RELATIONSHIP.items()}
+INTEREST_CODES = {v: k for k, v in INTERESTS.items()}
+
+# Fiktive Namen, deterministisch aus der Kunden-ID. customers.csv enthält keine Namen.
+FIRST_NAMES = {
+    "female": ["Anna", "Lena", "Maria", "Sophie", "Laura", "Julia", "Sarah", "Lisa", "Katharina", "Nina"],
+    "male": ["Max", "Lukas", "Jonas", "Felix", "Paul", "Tim", "Jan", "Niklas", "David", "Tobias"],
+    "diverse": ["Alex", "Kim", "Robin", "Sascha", "Toni", "Luca", "Noah", "Mika", "Jesse", "Charlie"],
+}
+LAST_NAMES = ["Bauer", "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Hoffmann"]
+
+# Spalten, die nur das Portal kennt (nicht in customers.csv). Liegen in portal_profiles.csv.
+PORTAL_FIELDS = ["first_name", "last_name", "street", "email", "phone", "children", "household_size",
+                 "channels", "contact_time", "newsletter"]
 
 
-# Liest die Zeile des Demokunden aus customers.csv; fehlt die Datei, gelten Standardwerte.
-def _demo_customer_row() -> dict[str, str]:
-    """Gibt die CSV-Zeile des Demokunden oder ein leeres Dict zurück."""
-    path = DEMO_DIR / "customers.csv"
+def _read_csv(name: str) -> list[dict[str, str]]:
+    """Liest eine CSV aus generated_demodata als Liste von Dicts; leer, falls sie fehlt."""
+    path = DEMO_DIR / name
     if not path.exists():
-        return {}
+        return []
     with path.open(encoding="utf-8", newline="") as file:
-        return next((row for row in csv.DictReader(file) if row["customer_id"] == DEMO_CUSTOMER_ID), {})
+        return list(csv.DictReader(file))
 
 
-# Erzeugt das bearbeitbare Profil. Persönliche Angaben sind fiktiv, Lebenslage stammt aus den Demodaten.
-def initial_profile() -> dict:
-    """Gibt das Startprofil des Demokunden als Dict zurück."""
-    row = _demo_customer_row()
-    interests = [INTERESTS.get(i, i) for i in row.get("interests", "cycling;technology").split(";")]
+def customer_ids() -> list[str]:
+    """Alle Kunden-IDs aus customers.csv."""
+    return [row["customer_id"] for row in _read_csv("customers.csv")]
+
+
+def customer_row(customer_id: str) -> dict[str, str]:
+    """Gibt die CSV-Zeile eines Kunden zurück oder ein leeres Dict."""
+    return next((row for row in _read_csv("customers.csv") if row["customer_id"] == customer_id), {})
+
+
+def _portal_row(customer_id: str) -> dict[str, str]:
+    """Portal-eigene Felder (Name, Adresse, Kontakt) aus portal_profiles.csv, falls vorhanden."""
+    return next((row for row in _read_csv("portal_profiles.csv") if row["customer_id"] == customer_id), {})
+
+
+def age_group_for(birth: date) -> str:
+    """Altersgruppe im Format der CSV (z. B. "30-39") aus dem Geburtsdatum."""
+    age = (TODAY - birth).days // 365
+    lo = max(age // 10 * 10, 20) if age >= 20 else 18
+    return f"{lo}-{lo + 9}" if age >= 20 else "18-19"
+
+
+def home_coords(postal_code: str, federal_state: str = "") -> tuple[float, float]:
+    """Koordinaten des Wohnorts: Mittel der Vorfälle mit gleicher PLZ, sonst Bundesland-Mitte."""
+    incidents = load_incidents()
+    if not incidents.empty:
+        same = incidents[incidents["postal_code"] == postal_code]
+        if not same.empty:
+            return float(same["latitude"].mean()), float(same["longitude"].mean())
+    return STATE_CENTERS.get(federal_state, (51.2, 10.4))
+
+
+# Erzeugt das bearbeitbare Profil aus customers.csv, life_events.csv und (falls vorhanden) portal_profiles.csv.
+def initial_profile(customer_id: str) -> dict:
+    """Gibt das Startprofil eines Kunden als Dict zurück."""
+    row = customer_row(customer_id)
+    extra = _portal_row(customer_id)
+    idx = int(customer_id[1:]) if customer_id[1:].isdigit() else 0
+    gender = row.get("gender", "diverse")
+    children = sum(1 for e in _read_csv("life_events.csv") if e["customer_id"] == customer_id and e["event_type"] == "kind")
+    relationship = RELATIONSHIP.get(row.get("relationship_status", "single"), "Ledig")
+    partner = relationship in ("Verheiratet", "In Partnerschaft")
+    interests = [INTERESTS.get(i, i) for i in row.get("interests", "").split(";") if i]
+    birth = date.fromisoformat(row["birth_date"]) if row.get("birth_date") else date(1990, 1, 1)
+    since = date.fromisoformat(row["customer_since"]) if row.get("customer_since") else TODAY
     return {
-        "first_name": "Max",
-        "last_name": "Bauer",
-        "customer_number": DEMO_LOGIN["customer_number"],
-        "birth_date": date.fromisoformat(row.get("birth_date", "1990-05-14")),
-        "street": "Lindenweg 12",
-        "postal_code": row.get("postal_code", "97082"),
-        "city": row.get("residence_city", "Würzburg"),
-        "email": DEMO_LOGIN["email"],
-        "phone": "+49 151 00000000",
-        "relationship_status": RELATIONSHIP.get(row.get("relationship_status", "married"), "Verheiratet"),
-        "children": 1,
-        "household_size": 3,
-        "occupation": OCCUPATIONS.get(row.get("occupation", "engineer"), "Ingenieur/in"),
+        "customer_id": customer_id,
+        "customer_number": customer_id,
+        "customer_since": since,
+        "federal_state": row.get("federal_state", ""),
+        "first_name": extra.get("first_name") or FIRST_NAMES.get(gender, FIRST_NAMES["diverse"])[idx % 10],
+        "last_name": extra.get("last_name") or LAST_NAMES[(idx // 10) % 10],
+        "birth_date": birth,
+        "street": extra.get("street") or "Musterstraße 1",
+        "postal_code": row.get("postal_code", "00000"),
+        "city": row.get("residence_city", ""),
+        "email": extra.get("email") or f"{customer_id.lower()}@example.com",
+        "phone": extra.get("phone") or "+49 151 00000000",
+        "relationship_status": relationship,
+        "children": int(extra["children"]) if extra.get("children") else children,
+        "household_size": int(extra["household_size"]) if extra.get("household_size") else 1 + int(partner) + children,
+        "occupation": OCCUPATIONS.get(row.get("occupation", "office_worker"), row.get("occupation", "")),
         "interests": interests,
-        "channels": ["E-Mail", "App-Benachrichtigung"],
-        "contact_time": "Abends",
-        "newsletter": False,
+        "channels": extra["channels"].split(";") if extra.get("channels") else ["E-Mail", "App-Benachrichtigung"],
+        "contact_time": extra.get("contact_time") or "Abends",
+        "newsletter": extra.get("newsletter") == "True" if extra.get("newsletter") else False,
     }
+
+
+# ------------------------------------------------------------
+# Rückschreiben in die CSV-Dateien (Source of Truth)
+# ------------------------------------------------------------
+
+def _write_csv(name: str, rows: list[dict], fieldnames: list[str]) -> None:
+    """Schreibt eine CSV vollständig neu, gleiche Spaltenreihenfolge wie beim Lesen."""
+    with (DEMO_DIR / name).open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def save_profile_to_csv(profile: dict) -> None:
+    """Überträgt das Profil in customers.csv (bekannte Spalten) und portal_profiles.csv (Portal-Felder)."""
+    cid = profile["customer_id"]
+    rows = _read_csv("customers.csv")
+    if rows:
+        for row in rows:
+            if row["customer_id"] == cid:
+                row["birth_date"] = profile["birth_date"].isoformat()
+                row["age_group"] = age_group_for(profile["birth_date"])
+                row["postal_code"] = profile["postal_code"]
+                row["residence_city"] = profile["city"]
+                row["relationship_status"] = RELATIONSHIP_CODES.get(profile["relationship_status"], row["relationship_status"])
+                row["occupation"] = OCCUPATION_CODES.get(profile["occupation"], row["occupation"])
+                row["interests"] = ";".join(INTEREST_CODES.get(i, i) for i in profile["interests"])
+        _write_csv("customers.csv", rows, list(rows[0].keys()))
+
+    extra_rows = [r for r in _read_csv("portal_profiles.csv") if r["customer_id"] != cid]
+    extra_rows.append({"customer_id": cid, **{
+        f: (";".join(profile[f]) if isinstance(profile[f], list) else str(profile[f])) for f in PORTAL_FIELDS
+    }})
+    extra_rows.sort(key=lambda r: r["customer_id"])
+    _write_csv("portal_profiles.csv", extra_rows, ["customer_id", *PORTAL_FIELDS])
+    st.cache_data.clear()   # Twin-Ergebnisse und CSV-Caches neu berechnen
 
 
 # ------------------------------------------------------------
@@ -248,13 +356,13 @@ def distance_km(a: tuple[float, float], b: tuple[float, float]) -> float:
 # ------------------------------------------------------------
 
 # Baut die Start-Mitteilungen; zwei davon werden aus den regionalen Demodaten abgeleitet.
-def initial_notifications(postal_code: str) -> list[dict]:
+def initial_notifications(postal_code: str, coords: tuple[float, float]) -> list[dict]:
     """Gibt die Mitteilungen beim Login zurück (neueste zuerst)."""
     notes = []
     disasters = load_disasters()
     if not disasters.empty:
         upcoming = disasters[disasters["status"].isin(["active", "forecast"]) & (disasters["country"] == "DE")].copy()
-        upcoming["km"] = upcoming.apply(lambda r: distance_km(HOME_COORDS, (r.latitude, r.longitude)), axis=1)
+        upcoming["km"] = upcoming.apply(lambda r: distance_km(coords, (r.latitude, r.longitude)), axis=1)
         for _, r in upcoming[upcoming["km"] <= 150].sort_values("km").iterrows():
             when = "aktuell" if r.status == "active" else f"ab {r.start_date:%d.%m.}"
             notes.append({

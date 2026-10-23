@@ -47,9 +47,9 @@ def twin_contracts(policies: list[Policy]) -> tuple[str, ...]:
 
 
 # Führt den Twin mit dem aktuellen Stand aus.
-def current_twin(policies: list[Policy], facts: dict) -> TwinResult | None:
-    """Berechnet den Twin für die aktuellen Verträge und Fragebogenangaben."""
-    return run_twin(twin_contracts(policies), facts["smoke_detector"])
+def current_twin(policies: list[Policy], facts: dict, customer_id: str) -> TwinResult | None:
+    """Berechnet den Twin für den Kunden mit den aktuellen Verträgen und Fragebogenangaben."""
+    return run_twin(customer_id, twin_contracts(policies), facts["smoke_detector"])
 
 
 # ------------------------------------------------------------

@@ -42,7 +42,7 @@ def build_context() -> dict:
     profile, policies = st.session_state.profile, st.session_state.policies
     facts = customer_facts(profile, st.session_state.answers)
     personalized = st.session_state.consents["personalization"]
-    twin = current_twin(policies, facts) if personalized else None
+    twin = current_twin(policies, facts, profile["customer_id"]) if personalized else None
     needs = coverage_needs(policies, facts, twin)
     offers_all = build_offers(policies, facts, twin) if personalized else []
     return {

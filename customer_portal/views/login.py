@@ -10,7 +10,7 @@ import time
 
 import streamlit as st
 
-from core.data import DEMO_LOGIN
+from core.data import DEMO_PASSWORD, customer_ids
 from core.state import check_login, login, notify
 from ui.components import icon, logo_html, render_html
 
@@ -27,13 +27,13 @@ def render() -> None:
             {logo_html()}
             <h1 class="dt-login-title">Willkommen zurück</h1>
             <p class="dt-login-sub">Melden Sie sich an, um Ihren Digital Twin, Ihre Verträge und persönlichen Empfehlungen zu sehen.</p>
-            <div class="dt-demo-box">{icon("info", "ms-sm")}<span><b>Demo-Zugang:</b> Kundennummer <code>{DEMO_LOGIN["customer_number"]}</code>
-            oder <code>{DEMO_LOGIN["email"]}</code> · Passwort <code>{DEMO_LOGIN["password"]}</code><br>
+            <div class="dt-demo-box">{icon("info", "ms-sm")}<span><b>Demo-Zugang:</b> Kunden-ID aus den Demodaten,
+            z. B. <code>C0010</code> ({customer_ids()[0]} bis {customer_ids()[-1]}) · Passwort <code>{DEMO_PASSWORD}</code><br>
             Bitte geben Sie keine echten Zugangsdaten ein.</span></div>
             """
         )
         with st.form("login_form", border=False):
-            st.text_input("Kundennummer oder E-Mail", placeholder="z. B. DT-100010", key="login_id")
+            st.text_input("Kunden-ID", placeholder="z. B. C0010", key="login_id")
             st.text_input("Passwort", type="password", placeholder="Ihr Passwort", key="login_pw")
             st.checkbox("Angemeldet bleiben", value=True, key="login_remember")
             st.form_submit_button("Anmelden", type="primary", on_click=_submit_login)
@@ -53,20 +53,21 @@ def render() -> None:
 def _submit_login() -> None:
     """Meldet bei korrekten Demo-Daten an, sonst wird eine Fehlermeldung gesetzt."""
     identifier, password = st.session_state.login_id, st.session_state.login_pw
+    customer_id = check_login(identifier, password) if identifier.strip() and password else None
     if not identifier.strip() or not password:
-        st.session_state.login_error = "Bitte Kundennummer bzw. E-Mail und Passwort eingeben."
-    elif check_login(identifier, password):
+        st.session_state.login_error = "Bitte Kunden-ID und Passwort eingeben."
+    elif customer_id:
         time.sleep(0.4)  # kurze, realistische Ladezeit der Demo-Anmeldung
         st.session_state.login_error = ""
-        login()
+        login(customer_id)
     else:
-        st.session_state.login_error = "Kundennummer/E-Mail oder Passwort ist nicht korrekt. Nutzen Sie den Demo-Zugang oben."
+        st.session_state.login_error = "Kunden-ID oder Passwort ist nicht korrekt. Nutzen Sie den Demo-Zugang oben."
 
 
 # Simuliert einen biometrischen Login (Konzept).
 def _biometric_login() -> None:
-    """Meldet den Demokunden ohne Passworteingabe an."""
-    login()
+    """Meldet den ersten Demokunden ohne Passworteingabe an."""
+    login(customer_ids()[0])
     notify("Biometrische Anmeldung erfolgreich (Demo)")
 
 
