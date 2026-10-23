@@ -1,0 +1,15 @@
+# Erzwingt das helle Design (keine dunkle Ansicht) und setzt die Grundfarben passend zum CSS.
+[theme]
+base = "light"
+primaryColor = "#0066CC"
+backgroundColor = "#F5F8FC"
+secondaryBackgroundColor = "#FAFCFE"
+textColor = "#1E293B"
+font = "sans serif"
+
+# Blendet das Streamlit-Menü für Endnutzer aus.
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

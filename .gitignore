@@ -1,0 +1,32 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtuelle Umgebungen ---
+.venv/
+venv/
+env/
+
+# --- Streamlit ---
+# config.toml (helles Design) bleibt im Repo, nur Zugangsdaten nicht.
+.streamlit/secrets.toml
+
+# --- Lokale Umgebungsvariablen / Zugangsdaten ---
+.env
+.env.*
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+
+# --- Betriebssystem ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Daten: CSV-Dateien ausdrücklich behalten ---
+!*.csv

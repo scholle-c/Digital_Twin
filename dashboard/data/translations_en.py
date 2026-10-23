@@ -1,0 +1,328 @@
+"""
+Englische Übersetzungen der synthetischen Mockdaten.
+
+Die Mockdaten in mock_data.py bleiben die deutsche Quelle. Dieses Wörterbuch
+ordnet jedem angezeigten deutschen Text seine englische Fassung zu; i18n.tr()
+schlägt hier nach, wenn Englisch ausgewählt ist. Fehlt ein Eintrag, erscheint
+der deutsche Text (nichts bricht). Neue Datentexte bitte hier ergänzen.
+"""
+
+DATA_EN: dict[str, str] = {
+    # --- Kategorien, Status und Standard-Kennzahlen ---
+    "PRÄVENTION": "PREVENTION",
+    "DECKUNGSLÜCKE": "COVERAGE GAP",
+    "CROSS-SELL": "CROSS-SELL",
+    "Geschützt": "Protected",
+    "Lücke prüfen": "Check gap",
+    "Nicht vorhanden": "Not in place",
+    "Vertragsstatus": "Contract status",
+    "Enthalten": "Included",
+    "Aktuelle Risikolage": "Current risk level",
+    "Unauffällig": "No concerns",
+    "Handlungsbedarf": "Action needed",
+    "Keiner": "None",
+    "Prüfen": "Review",
+    "Unklar": "Unclear",
+    "Bei Gelegenheit": "When convenient",
+
+    # --- Orte, Wohnsituation, Fristen, Datumsangaben ---
+    "Bayreuth": "Bayreuth",
+    "Nürnberg": "Nuremberg",
+    "Erlangen": "Erlangen",
+    "Bamberg": "Bamberg",
+    "Eigentumswohnung": "Owned apartment",
+    "Einfamilienhaus": "Detached house",
+    "Mietwohnung": "Rented apartment",
+    "Heute": "Today",
+    "Diese Woche": "This week",
+    "Nächste Tage": "Next few days",
+    "12. Okt.": "Oct 12",
+    "3. Mai": "May 3",
+    "28. Aug.": "Aug 28",
+    "2. Sep.": "Sep 2",
+    "15. Jun.": "Jun 15",
+    "Vor 3 Monaten": "3 months ago",
+    "Vor 5 Monaten": "5 months ago",
+    "Vor 1 Woche": "1 week ago",
+    "Vor 1 Jahr": "1 year ago",
+    "Vor 7 Wochen": "7 weeks ago",
+    "Vor 2 Jahren": "2 years ago",
+    "Vor 4 Monaten": "4 months ago",
+    "In 4 Monaten": "In 4 months",
+    "2014": "2014",
+    "03/2019": "03/2019",
+
+    # --- Versicherungssparten ---
+    "Hausrat": "Contents",
+    "Elementar": "Natural hazards",
+    "Elementarschutz": "Natural hazard cover",
+    "Haftpflicht": "Liability",
+    "Privathaftpflicht": "Personal liability",
+    "Wohngebäude": "Buildings",
+    "Fahrrad": "Bicycle",
+    "Fahrradschutz": "Bicycle cover",
+    "Unfall": "Accident",
+    "Unfallschutz": "Accident cover",
+
+    # --- Vertragsdetails ---
+    "Vertragsnummer": "Contract number",
+    "Versicherungssumme": "Sum insured",
+    "Selbstbeteiligung": "Deductible",
+    "Vertragsbeginn": "Start date",
+    "Status": "Status",
+    "Tarif": "Plan",
+    "Deckungssumme": "Coverage limit",
+    "Letzte Anpassung": "Last adjusted",
+    "Schutz vor Unterversicherung": "Underinsurance waiver",
+    "Single": "Single",
+    "Familie": "Family",
+    "Paar": "Couple",
+    "Nein": "No",
+    "Eingeschlossen": "Included",
+    "Nicht eingeschlossen": "Not included",
+    "Im Vertragsbestand nicht gefunden": "Not found in contract portfolio",
+    "Über Arbeitgeber, endet mit Ruhestand": "Via employer, ends at retirement",
+    "HR-204117 (synthetisch)": "HR-204117 (synthetic)",
+    "PH-881203 (synthetisch)": "PH-881203 (synthetic)",
+    "HR-117450 (synthetisch)": "HR-117450 (synthetic)",
+    "WG-550918 (synthetisch)": "WG-550918 (synthetic)",
+    "HR-330872 (synthetisch)": "HR-330872 (synthetic)",
+    "65.000 €": "€65,000",
+    "45.000 €": "€45,000",
+    "40.000 €": "€40,000",
+    "35.000 €": "€35,000",
+    "150 €": "€150",
+    "10 Mio. €": "€10 million",
+    "15 Mio. €": "€15 million",
+    "Baustein enthalten": "Module included",
+    "Baustein nicht enthalten": "Module not included",
+
+    # --- Datenquellen und Merkmale ---
+    "Wetterwarnung": "Weather warning",
+    "Wohnadresse": "Home address",
+    "Vertragsdaten": "Contract data",
+    "Amtliche Wetterwarnung": "Official weather warning",
+    "Wohnadresse und Geländedaten": "Home address and terrain data",
+    "nächste 7 Tage": "next 7 days",
+    "Geländehöhe": "Elevation",
+    "Gewässernähe": "Proximity to water",
+    "Region": "Region",
+    "Gebäudetyp": "Building type",
+    "Baujahr": "Year built",
+    "Wohnlage": "Location",
+    "Kellernutzung unbekannt": "Basement use unknown",
+    "Wohnsituation": "Living situation",
+    "Hausratwert": "Contents value",
+    "Regionale Schadenstatistik": "Regional claims statistics",
+    "Saisonale Wetterdaten": "Seasonal weather data",
+    "Wetterdaten": "Weather data",
+    "Standortdaten": "Location data",
+    "Wohnfläche": "Living space",
+    "Gesprächsnotiz": "Meeting note",
+    "Vergleichswerte Region": "Regional benchmarks",
+    "Zahlungsdaten (mit Einwilligung)": "Payment data (with consent)",
+    "Zahlungsdaten": "Payment data",
+    "Händlerkategorie": "Merchant category",
+    "Regionale Statistik": "Regional statistics",
+    "Abstellort unbekannt": "Parking location unknown",
+    "Zahlungsmuster": "Payment patterns",
+    "Meldeadresse": "Registered address",
+    "Vertragsdaten Arbeitgeber": "Employer contract data",
+    "Altersgruppe": "Age group",
+
+    # --- Kennzahlen der Detailseiten ---
+    "Nicht enthalten": "Not included",
+    "Erhöht": "Elevated",
+    "Summe veraltet": "Sum outdated",
+    "Unterversichert": "Underinsured",
+    "Mittel": "Medium",
+    "Single-Tarif": "Single plan",
+    "Steigt mit Familie": "Rising with family",
+    "Endet in 4 Monaten": "Ends in 4 months",
+    "Normal": "Normal",
+
+    # --- Anna Schneider ---
+    "Starkregenwarnung – Elementarschutz nicht hinterlegt": "Heavy rain warning – no natural hazard cover",
+    "Diese Woche kontaktieren": "Contact this week",
+    "Schutzmaßnahmen erklären und Deckung gemeinsam prüfen.": "Explain protective measures and review cover together.",
+    "Schaden verhindern": "Prevent damage",
+    "Guten Tag Frau Schneider, für Ihre Region ist aktuell Starkregen angekündigt. Ich möchte gerne kurz mit Ihnen prüfen, ob Ihr Zuhause ausreichend geschützt ist.":
+        "Hello Ms Schneider, heavy rain has been forecast for your area. I'd like to briefly check with you whether your home is adequately protected.",
+    "Frau Schneider kennt einfache Schutzmaßnahmen und entscheidet informiert, ob sie ihren Schutz um Elementarschäden ergänzen möchte.":
+        "Ms Schneider knows simple protective measures and makes an informed decision on adding natural hazard cover.",
+    "Für Bayreuth besteht erhöhte Starkregengefahr.": "Bayreuth faces an elevated risk of heavy rain.",
+    "Ein Elementarschutz ist nicht hinterlegt.": "No natural hazard cover is on file.",
+    "Amtliche Wetterwarnung: Für Bayreuth ist ab heute Starkregen angekündigt.":
+        "Official weather warning: heavy rain is forecast for Bayreuth starting today.",
+    "Wohnadresse: Die hinterlegte Adresse liegt im Warngebiet.": "Home address: the address on file is within the warning area.",
+    "Vertragsdaten: Hausrat und Haftpflicht sind vorhanden.": "Contract data: contents and liability insurance are in place.",
+    "Ein Elementarschutz wurde im Vertragsbestand nicht gefunden.": "No natural hazard cover was found in the contract portfolio.",
+    "War Ihre Wohnung oder Ihr Keller schon einmal von Wasser betroffen?": "Has your apartment or basement ever been affected by water?",
+    "Haben Sie bereits Vorkehrungen getroffen, zum Beispiel eine Rückstausicherung?":
+        "Have you already taken precautions, for example a backflow preventer?",
+    "Darf ich Ihnen zeigen, wie ein Elementarschutz Ihre Hausratversicherung ergänzt?":
+        "May I show you how natural hazard cover complements your contents insurance?",
+    "Starkregenwarnung": "Heavy rain warning",
+    "Umzug bestätigt": "Move confirmed",
+    "Kein Handlungsbedarf. Bei Gelegenheit Versicherungssumme bestätigen.":
+        "No action needed. Confirm the sum insured when convenient.",
+    "Kein akuter Handlungsbedarf": "No urgent action needed",
+    "Nutzung der Vertragsdaten im Rahmen der bestehenden Kundenbeziehung.":
+        "Contract data is used within the existing customer relationship.",
+    "Auf akute Starkregengefahr hinweisen, Schutzmaßnahmen erklären und Elementardeckung gemeinsam prüfen.":
+        "Point out the acute heavy rain risk, explain protective measures and review natural hazard cover together.",
+    "Kundin diese Woche kontaktieren": "Contact the customer this week",
+    "Wetter- und Geländedaten sind öffentlich verfügbar. Die Wohnadresse stammt aus dem Vertrag; Frau Schneider hat der Nutzung für Präventionshinweise zugestimmt.":
+        "Weather and terrain data are publicly available. The home address comes from the contract; Ms Schneider has consented to its use for prevention notices.",
+    "Ist ein Keller vorhanden und wie wird er genutzt?": "Is there a basement and how is it used?",
+    "Erhöhtes Starkregenrisiko": "Elevated heavy rain risk",
+    "Wohnlage durch Überflutung gefährdet": "Home location at risk of flooding",
+    "Rückstau im Gebäude möglich": "Sewer backflow into the building possible",
+    "Wasserschaden in Kellerräumen": "Water damage in basement rooms",
+    "Hohe Schadenhöhe bei Eigentum": "High damage costs for owned property",
+    "Vergleichbare Schäden in der Nachbarschaft": "Similar damage in the neighbourhood",
+    "Hagel in den nächsten 30 Tagen": "Hail in the next 30 days",
+    "Starkregenwarnung aktiv": "Heavy rain warning active",
+    "Amtliche Unwetterwarnung für den Landkreis Bayreuth: bis zu 40 l/m² in 6 Stunden, gültig ab heute für die nächsten Tage.":
+        "Official severe weather warning for the Bayreuth district: up to 40 l/m² in 6 hours, valid from today for the next few days.",
+    "Niedrige Geländelage": "Low-lying terrain",
+    "Die Wohnadresse liegt in einer Senke rund 300 m vom Roten Main entfernt. Bei Starkregen sammelt sich dort häufig Oberflächenwasser.":
+        "The home address lies in a hollow about 300 m from the Red Main river. Surface water often collects there during heavy rain.",
+    "Kein Elementarschutz hinterlegt": "No natural hazard cover on file",
+    "Hausrat und Haftpflicht sind vorhanden. Ein Baustein für Elementarschäden (Überschwemmung, Rückstau) wurde nicht gefunden.":
+        "Contents and liability insurance are in place. No module for natural hazards (flooding, backflow) was found.",
+    "Der Vertrag passt zur aktuellen Situation. Beim nächsten Jahresgespräch kurz bestätigen.":
+        "The contract fits the current situation. Briefly confirm at the next annual review.",
+
+    # --- Thomas Becker ---
+    "Hausratwert vermutlich über Versicherungssumme": "Contents value likely above sum insured",
+    "Versicherungssumme gemeinsam prüfen und bei Bedarf anpassen.": "Review the sum insured together and adjust if needed.",
+    "Deckungslücke vermeiden": "Avoid a coverage gap",
+    "Guten Tag Herr Becker, Ihr Zuhause hat sich in den letzten Jahren verändert. Ich möchte kurz mit Ihnen prüfen, ob Ihre Hausratversicherung noch zum heutigen Wert passt.":
+        "Hello Mr Becker, your home has changed in recent years. I'd like to briefly check with you whether your contents insurance still matches today's value.",
+    "Herr Becker weiß, ob seine Versicherungssumme ausreicht, und kann sie bei Bedarf anpassen.":
+        "Mr Becker knows whether his sum insured is sufficient and can adjust it if needed.",
+    "Die Versicherungssumme der Hausrat wurde seit 2014 nicht angepasst.": "The contents sum insured has not been adjusted since 2014.",
+    "Nach einem Anbau liegt der Hausratwert vermutlich deutlich höher.": "After an extension, the contents value is likely much higher.",
+    "Vertragsdaten: Versicherungssumme 45.000 €, seit 2014 unverändert.": "Contract data: sum insured €45,000, unchanged since 2014.",
+    "Wohnfläche: 160 m² – üblich wären rund 104.000 € (650 € pro m²).": "Living space: 160 m² – typically about €104,000 (€650 per m²).",
+    "Gesprächsnotiz vom Mai: Herr Becker hat einen Wintergarten-Anbau erwähnt.": "Meeting note from May: Mr Becker mentioned a conservatory extension.",
+    "Bei einer zu niedrigen Summe wird im Schadenfall eventuell nur anteilig erstattet.":
+        "If the sum is too low, a claim may only be reimbursed proportionally.",
+    "Wie nutzen Sie den neuen Wintergarten, und wie ist er eingerichtet?": "How do you use the new conservatory, and how is it furnished?",
+    "Haben Sie seit 2014 größere Anschaffungen gemacht, etwa Möbel oder Elektronik?":
+        "Have you made any major purchases since 2014, such as furniture or electronics?",
+    "Wäre es für Sie hilfreich, wenn die Versicherungssumme künftig automatisch passt?":
+        "Would it help you if the sum insured adjusted automatically in future?",
+    "Wintergarten-Anbau erwähnt": "Conservatory extension mentioned",
+    "Hausrat zuletzt angepasst": "Contents insurance last adjusted",
+    "Hausratwert gemeinsam schätzen und die Versicherungssumme an die aktuelle Wohnfläche anpassen.":
+        "Estimate the contents value together and adjust the sum insured to the current living space.",
+    "Kunden diese Woche kontaktieren": "Contact the customer this week",
+    "Wie groß ist die Wohnfläche nach dem Anbau genau?": "What exactly is the living space after the extension?",
+    "Gab es größere Anschaffungen in den letzten Jahren?": "Have there been major purchases in recent years?",
+    "Hausratwert über Versicherungssumme": "Contents value above sum insured",
+    "Neue Einrichtung nach Anbau": "New furnishings after extension",
+    "Einbruchrisiko in der Wohngegend": "Burglary risk in the neighbourhood",
+    "Summe seit 2014 unverändert": "Sum unchanged since 2014",
+    "Die Versicherungssumme von 45.000 € wurde seit Vertragsbeginn nicht angepasst.":
+        "The sum insured of €45,000 has not been adjusted since the contract started.",
+    "160 m² – Richtwert rund 104.000 €": "160 m² – benchmark about €104,000",
+    "Üblich sind etwa 650 € Hausratwert pro Quadratmeter Wohnfläche.": "A typical contents value is about €650 per square metre of living space.",
+    "Im Gespräch vom 3. Mai hat Herr Becker einen neuen Wintergarten erwähnt.": "In the meeting on May 3, Mr Becker mentioned a new conservatory.",
+    "Anbau beim Gebäudeversicherer melden lassen.": "Have the extension reported to the buildings insurer.",
+    "Wurde der Anbau bereits gemeldet?": "Has the extension been reported yet?",
+
+    # --- Julia Wagner ---
+    "Neues E-Bike erkannt – Schutz prüfen": "New e-bike detected – check cover",
+    "In den nächsten Tagen ansprechen": "Reach out in the next few days",
+    "Tatsächlichen Kauf bestätigen und Schutzbedarf gemeinsam prüfen.": "Confirm the actual purchase and review protection needs together.",
+    "Neuen Wertgegenstand passend absichern": "Properly insure a new valuable",
+    "Hallo Frau Wagner, ich möchte sicherstellen, dass Ihre Versicherung zu Ihrem Alltag passt. Haben Sie sich kürzlich ein neues Fahrrad angeschafft?":
+        "Hello Ms Wagner, I'd like to make sure your insurance fits your everyday life. Have you recently bought a new bicycle?",
+    "Frau Wagner weiß, ob ihr E-Bike geschützt ist, und kann den passenden Schutz wählen.":
+        "Ms Wagner knows whether her e-bike is covered and can choose suitable protection.",
+    "Eine Zahlung bei einem Fahrradhändler deutet auf ein neues E-Bike hin.": "A payment at a bicycle shop suggests a new e-bike.",
+    "Fahrraddiebstahl ist in der Hausrat bisher nicht eingeschlossen.": "Bicycle theft is not yet included in the contents insurance.",
+    "Zahlungsdaten: Zahlung über 2.800 € bei einem Fahrradhändler (mit Einwilligung ausgewertet).":
+        "Payment data: payment of €2,800 at a bicycle shop (analysed with consent).",
+    "Der Kauf ist nicht bestätigt – bitte im Gespräch nachfragen.": "The purchase is not confirmed – please ask during the conversation.",
+    "Vertragsdaten: Hausrat vorhanden, Fahrradbaustein nicht eingeschlossen.": "Contract data: contents insurance in place, bicycle module not included.",
+    "Nutzen Sie das E-Bike täglich, zum Beispiel für den Weg zur Arbeit?": "Do you use the e-bike daily, for example to commute to work?",
+    "Wo steht das Rad nachts – im Keller, im Hof oder auf der Straße?": "Where is the bike kept at night – in the basement, the courtyard or on the street?",
+    "Möchten Sie das E-Bike auch unterwegs gegen Diebstahl absichern?": "Would you like to insure the e-bike against theft while out and about?",
+    "Zahlung bei Fahrradhändler": "Payment at bicycle shop",
+    "Hausrat abgeschlossen": "Contents insurance taken out",
+    "Kauf bestätigen lassen und Fahrradschutz für das E-Bike anbieten.": "Have the purchase confirmed and offer bicycle cover for the e-bike.",
+    "Kundin in den nächsten Tagen ansprechen": "Reach out to the customer in the next few days",
+    "Neuen Wertgegenstand absichern": "Insure a new valuable",
+    "Frau Wagner hat der Auswertung ihrer Zahlungsdaten für Beratungshinweise zugestimmt.":
+        "Ms Wagner has consented to her payment data being analysed for advisory notices.",
+    "Wurde tatsächlich ein E-Bike gekauft?": "Was an e-bike actually purchased?",
+    "Wo wird das Rad abgestellt?": "Where is the bike parked?",
+    "Neues E-Bike gekauft": "New e-bike purchased",
+    "Diebstahlrisiko am Wohnort": "Theft risk at place of residence",
+    "Tägliche Nutzung für den Arbeitsweg": "Daily use for commuting",
+    "Zahlung über 2.800 € bei einem Fahrradhändler. Der Kauf ist nicht bestätigt.":
+        "Payment of €2,800 at a bicycle shop. The purchase is not confirmed.",
+    "Fahrradbaustein nicht enthalten": "Bicycle module not included",
+    "In der Hausrat ist Fahrraddiebstahl unterwegs nicht mitversichert.": "The contents insurance does not cover bicycle theft away from home.",
+
+    # --- Lena Fischer ---
+    "Nachwuchs angekündigt – Familienschutz prüfen": "Baby on the way – check family cover",
+    "Haftpflicht auf Familientarif umstellen und Absicherung der Familie besprechen.":
+        "Switch liability insurance to a family plan and discuss family protection.",
+    "Familie von Anfang an absichern": "Protect the family from day one",
+    "Guten Tag Frau Fischer, herzlichen Glückwunsch zum erwarteten Nachwuchs! Ich möchte kurz mit Ihnen schauen, ob Ihre Familie gut abgesichert ist.":
+        "Hello Ms Fischer, congratulations on your expected baby! I'd like to briefly check with you whether your family is well protected.",
+    "Frau Fischer weiß, welche Verträge sie für die Familie anpassen sollte.": "Ms Fischer knows which contracts she should adjust for her family.",
+    "Frau Fischer hat im letzten Gespräch Nachwuchs angekündigt.": "Ms Fischer mentioned a baby on the way in the last conversation.",
+    "Die Haftpflicht ist bisher als Single-Tarif abgeschlossen.": "The liability insurance is currently a single plan.",
+    "Gesprächsnotiz vom September: Nachwuchs für Anfang nächsten Jahres erwartet.": "Meeting note from September: baby expected early next year.",
+    "Vertragsdaten: Haftpflicht im Single-Tarif, keine Unfallversicherung.": "Contract data: liability on a single plan, no accident insurance.",
+    "Wohnen Sie bereits mit Ihrem Partner zusammen?": "Do you already live with your partner?",
+    "Wissen Sie, dass Ihr Kind in der Single-Haftpflicht nicht mitversichert ist?": "Are you aware that your child is not covered by single liability insurance?",
+    "Möchten Sie auch über einen Unfallschutz für Ihr Kind sprechen?": "Would you also like to talk about accident cover for your child?",
+    "Nachwuchs im Gespräch erwähnt": "Baby mentioned in conversation",
+    "Haftpflicht abgeschlossen": "Liability insurance taken out",
+    "Auf Familientarif umstellen, damit Partner und Kind mitversichert sind.": "Switch to a family plan so partner and child are covered.",
+    "Lebt der Partner bereits im gemeinsamen Haushalt?": "Does the partner already live in the same household?",
+    "Familienzuwachs in den nächsten Monaten": "New family member in the coming months",
+    "Partner im gemeinsamen Haushalt": "Partner in the same household",
+    "Nachwuchs angekündigt": "Baby announced",
+    "Im Gespräch vom 2. September hat Frau Fischer Nachwuchs für Anfang nächsten Jahres erwähnt.":
+        "In the meeting on September 2, Ms Fischer mentioned a baby due early next year.",
+    "Single-Tarif ohne Familie": "Single plan without family",
+    "Kinder und Partner sind im Single-Tarif nicht mitversichert.": "Children and partners are not covered under the single plan.",
+    "Kinderunfallschutz im Gespräch kurz vorstellen.": "Briefly introduce child accident cover in the conversation.",
+    "Bei nächster Gelegenheit ansprechen": "Raise at the next opportunity",
+
+    # --- Max Hoffmann ---
+    "Ruhestand in Kürze – Absicherung anpassen": "Retiring soon – adjust cover",
+    "Absicherung für den Ruhestand gemeinsam durchgehen.": "Go through retirement protection together.",
+    "Gut abgesichert in den Ruhestand": "Well protected into retirement",
+    "Guten Tag Herr Hoffmann, Ihr Ruhestand rückt näher. Ich möchte mit Ihnen kurz schauen, welche Absicherungen sich dadurch verändern.":
+        "Hello Mr Hoffmann, your retirement is approaching. I'd like to briefly look at which of your covers will change as a result.",
+    "Herr Hoffmann weiß, welche Verträge er vor dem Ruhestand anpassen sollte.": "Mr Hoffmann knows which contracts he should adjust before retiring.",
+    "Herr Hoffmann geht in vier Monaten in den Ruhestand.": "Mr Hoffmann retires in four months.",
+    "Sein Unfallschutz über den Arbeitgeber endet dann.": "His accident cover through his employer will then end.",
+    "Gesprächsnotiz vom Juni: Renteneintritt zum 1. März geplant.": "Meeting note from June: retirement planned for March 1.",
+    "Vertragsdaten: Unfallschutz läuft über eine Gruppenversicherung des Arbeitgebers.":
+        "Contract data: accident cover runs through the employer's group insurance.",
+    "Steht der Termin für Ihren Renteneintritt schon fest?": "Is your retirement date already fixed?",
+    "Wissen Sie, dass Ihr Unfallschutz über den Arbeitgeber dann endet?": "Are you aware that your accident cover through your employer will then end?",
+    "Welche Pläne haben Sie für die Zeit nach dem Berufsleben?": "What are your plans for life after work?",
+    "Ruhestand": "Retirement",
+    "Gespräch zur Altersvorsorge": "Pension planning meeting",
+    "Private Unfallversicherung für die Zeit nach dem Berufsleben vorstellen.": "Introduce private accident insurance for life after work.",
+    "Kunden in den nächsten Tagen ansprechen": "Reach out to the customer in the next few days",
+    "Steht das Datum des Renteneintritts fest?": "Is the retirement date fixed?",
+    "Unfallschutz endet mit dem Ruhestand": "Accident cover ends at retirement",
+    "Mehr Freizeitaktivität im Ruhestand": "More leisure activity in retirement",
+    "Renteneintritt zum 1. März": "Retirement on March 1",
+    "Im Gespräch vom 15. Juni hat Herr Hoffmann seinen geplanten Renteneintritt genannt.":
+        "In the meeting on June 15, Mr Hoffmann mentioned his planned retirement.",
+    "Schutz über den Arbeitgeber": "Cover through employer",
+    "Der Unfallschutz läuft über eine Gruppenversicherung und endet mit dem Arbeitsverhältnis.":
+        "The accident cover runs through a group policy and ends with the employment.",
+}
