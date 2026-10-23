@@ -1,0 +1,53 @@
+disaster_id,disaster_type,start_date,end_date,status,country,region,city,latitude,longitude,affected_radius_km,intensity_value,intensity_unit,severity_level,source
+D0001,heavy_rain,2026-10-23,2026-10-25,active,DE,Bayern,Bayreuth,49.9456,11.5713,25,55,mm_24h,4,synthetic
+D0002,flood,2026-10-24,2026-10-28,forecast,DE,Bayern,Bamberg,49.8988,10.9028,30,520,water_level_cm,3,synthetic
+D0003,storm,2026-10-26,2026-10-27,forecast,DE,Schleswig-Holstein,Kiel,54.3233,10.1228,80,125,gust_kmh,4,synthetic
+D0004,hail,2026-06-18,2026-06-18,past,DE,Baden-Württemberg,Reutlingen,48.4914,9.2043,15,5.5,hailstone_cm,4,synthetic
+D0005,flood,2024-06-01,2024-06-07,past,DE,Bayern,Augsburg,48.3705,10.8978,40,610,water_level_cm,5,synthetic
+D0006,heavy_rain,2025-07-12,2025-07-13,past,DE,Bayern,Nürnberg,49.4521,11.0767,20,62,mm_24h,3,synthetic
+D0007,storm,2025-02-17,2025-02-18,past,DE,Hamburg,Hamburg,53.5511,9.9937,60,140,gust_kmh,4,synthetic
+D0008,heatwave,2025-07-01,2025-07-06,past,DE,Nordrhein-Westfalen,Köln,50.9375,6.9603,100,38.4,max_temp_c,3,synthetic
+D0009,wildfire,2025-08-09,2025-08-14,past,DE,Brandenburg,Treuenbrietzen,52.0956,12.8714,8,410,burned_area_ha,3,synthetic
+D0010,earthquake,2025-03-04,2025-03-04,past,DE,Baden-Württemberg,Albstadt,48.2139,9.0230,30,4.1,magnitude_mw,2,synthetic
+D0011,landslide,2025-09-22,2025-09-22,past,DE,Bayern,Garmisch-Partenkirchen,47.4917,11.0955,3,12000,volume_m3,3,synthetic
+D0012,avalanche,2026-02-08,2026-02-10,past,DE,Bayern,Oberstdorf,47.4099,10.2797,10,4,avalanche_danger_level,4,synthetic
+D0013,snow_load,2026-01-14,2026-01-20,past,DE,Sachsen,Oberwiesenthal,50.4194,12.9700,25,180,snow_load_kg_m2,3,synthetic
+D0014,heavy_rain,2025-08-03,2025-08-04,past,DE,Nordrhein-Westfalen,Wuppertal,51.2562,7.1508,20,78,mm_24h,4,synthetic
+D0015,flood,2026-01-27,2026-02-01,past,DE,Rheinland-Pfalz,Bad Neuenahr-Ahrweiler,50.5440,7.1137,20,480,water_level_cm,4,synthetic
+D0016,hail,2026-07-11,2026-07-11,past,DE,Bayern,München,48.1351,11.5820,30,4.0,hailstone_cm,3,synthetic
+D0017,storm,2025-11-21,2025-11-22,past,DE,Niedersachsen,Hannover,52.3759,9.7320,70,105,gust_kmh,3,synthetic
+D0018,heatwave,2026-08-10,2026-08-16,past,DE,Berlin,Berlin,52.5200,13.4050,80,36.9,max_temp_c,3,synthetic
+D0019,flood,2024-09-15,2024-09-22,past,DE,Sachsen,Dresden,51.0504,13.7373,35,690,water_level_cm,5,synthetic
+D0020,heavy_rain,2026-09-06,2026-09-07,past,DE,Hessen,Frankfurt am Main,50.1109,8.6821,25,48,mm_24h,3,synthetic
+D0021,storm,2026-03-02,2026-03-03,past,DE,Mecklenburg-Vorpommern,Rostock,54.0924,12.0991,60,118,gust_kmh,3,synthetic
+D0022,flood,2024-09-14,2024-09-20,past,AT,Niederösterreich,St. Pölten,48.2047,15.6256,40,590,water_level_cm,5,synthetic
+D0023,avalanche,2026-01-19,2026-01-22,past,AT,Tirol,Ischgl,47.0129,10.2915,12,4,avalanche_danger_level,4,synthetic
+D0024,hail,2025-07-24,2025-07-24,past,AT,Steiermark,Graz,47.0707,15.4395,20,6.0,hailstone_cm,5,synthetic
+D0025,landslide,2025-06-05,2025-06-05,past,AT,Vorarlberg,Bludenz,47.1547,9.8222,2,30000,volume_m3,4,synthetic
+D0026,landslide,2025-05-17,2025-05-19,past,CH,Graubünden,Brienz/Brinzauls,46.6705,9.6020,2,1200000,volume_m3,5,synthetic
+D0027,hail,2026-06-29,2026-06-29,past,CH,Bern,Bern,46.9480,7.4474,15,4.5,hailstone_cm,3,synthetic
+D0028,storm,2025-12-11,2025-12-12,past,CH,Zürich,Zürich,47.3769,8.5417,40,130,gust_kmh,4,synthetic
+D0029,earthquake,2025-03-13,2025-03-13,past,IT,Campania,Pozzuoli,40.8226,14.1220,15,4.4,magnitude_mw,3,synthetic
+D0030,volcanic_eruption,2025-08-02,2025-08-05,past,IT,Sicilia,Zafferana Etnea,37.6904,15.1040,20,2,vei,3,synthetic
+D0031,flood,2024-10-18,2024-10-24,past,IT,Emilia-Romagna,Faenza,44.2856,11.8833,30,820,water_level_cm,5,synthetic
+D0032,wildfire,2025-07-20,2025-07-26,past,IT,Sardegna,Oristano,39.9062,8.5884,15,2300,burned_area_ha,4,synthetic
+D0033,heatwave,2026-07-14,2026-07-22,past,IT,Lazio,Roma,41.9028,12.4964,80,41.2,max_temp_c,4,synthetic
+D0034,heavy_rain,2025-10-14,2025-10-15,past,ES,Comunitat Valenciana,Paiporta,39.4278,-0.4170,25,310,mm_24h,5,synthetic
+D0035,wildfire,2025-08-17,2025-08-25,past,ES,Andalucía,Huelva,37.2614,-6.9447,20,3400,burned_area_ha,4,synthetic
+D0036,heatwave,2026-07-03,2026-07-12,past,ES,Andalucía,Sevilla,37.3891,-5.9845,90,44.6,max_temp_c,5,synthetic
+D0037,earthquake,2026-04-08,2026-04-08,past,ES,Región de Murcia,Lorca,37.6772,-1.7006,25,4.8,magnitude_mw,3,synthetic
+D0038,storm,2025-11-03,2025-11-04,past,FR,Bretagne,Brest,48.3904,-4.4861,120,175,gust_kmh,5,synthetic
+D0039,flood,2026-01-09,2026-01-16,past,FR,Hauts-de-France,Saint-Omer,50.7500,2.2522,30,380,water_level_cm,4,synthetic
+D0040,hail,2026-06-22,2026-06-22,past,FR,Auvergne-Rhône-Alpes,Lyon,45.7640,4.8357,25,7.0,hailstone_cm,5,synthetic
+D0041,wildfire,2025-07-08,2025-07-11,past,FR,Provence-Alpes-Côte d'Azur,Martigues,43.4045,5.0476,10,1200,burned_area_ha,4,synthetic
+D0042,avalanche,2026-02-15,2026-02-17,past,FR,Auvergne-Rhône-Alpes,Chamonix-Mont-Blanc,45.9237,6.8694,10,3,avalanche_danger_level,3,synthetic
+D0043,storm,2026-01-24,2026-01-25,past,NL,Noord-Holland,Amsterdam,52.3676,4.9041,70,120,gust_kmh,4,synthetic
+D0044,flood,2025-12-28,2026-01-03,past,BE,Wallonie,Liège,50.6326,5.5797,25,520,water_level_cm,4,synthetic
+D0045,flood,2024-09-14,2024-09-21,past,PL,Dolnośląskie,Kłodzko,50.4346,16.6614,30,720,water_level_cm,5,synthetic
+D0046,flood,2024-09-15,2024-09-21,past,CZ,Moravskoslezský kraj,Opava,49.9387,17.9026,30,640,water_level_cm,4,synthetic
+D0047,heavy_rain,2026-08-19,2026-08-20,past,CZ,Praha,Praha,50.0755,14.4378,30,85,mm_24h,4,synthetic
+D0048,wildfire,2025-08-11,2025-08-16,past,GR,Attiki,Athína,37.9838,23.7275,30,9800,burned_area_ha,5,synthetic
+D0049,earthquake,2025-05-22,2025-05-22,past,GR,Kriti,Irakleio,35.3387,25.1442,50,5.6,magnitude_mw,4,synthetic
+D0050,storm,2026-01-11,2026-01-12,past,GB,Scotland,Edinburgh,55.9533,-3.1883,100,150,gust_kmh,4,synthetic
+D0051,heavy_rain,2025-09-28,2025-09-29,past,NO,Vestland,Bergen,60.3913,5.3221,30,110,mm_24h,4,synthetic
+D0052,volcanic_eruption,2025-04-01,2025-04-03,past,IS,Suðurnes,Grindavík,63.8424,-22.4338,10,1,vei,3,synthetic
