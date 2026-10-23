@@ -19,9 +19,6 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 from twin_comparison import Portfolio, build_portfolio, damage_rank, nearest, percentile  # noqa: E402
 
 HIGHLIGHT = "#003781"
-NEIGHBOR = "#D98A00"
-# Blauverlauf wie in der Heatmap des Kundenportals.
-PORTAL_SCALE = [[0, "#BCD4F2"], [0.5, "#4F8AD1"], [1, "#0A1F44"]]
 BUILDING_TYPES = {
     "apartment": "Wohnung",
     "semi_detached": "Doppelhaushälfte",
@@ -52,14 +49,6 @@ def render_twin_comparison(customer_id: str) -> None:
         theme=None, config={"displayModeBar": False, "scrollZoom": False},
     )
     st.caption(t("twin_position_note"))
-
-    st.markdown(f"**{t('twin_map')}**")
-    color_metric = st.selectbox(t("twin_color_by"), list(portfolio.metric_groups), key="twin_color_metric")
-    st.plotly_chart(
-        _map_chart(portfolio, customer_id, neighbors, color_metric), width="stretch", key="twin_map_chart",
-        theme=None, config={"displaylogo": False, "scrollZoom": False},
-    )
-    st.caption(t("twin_map_note"))
 
     st.markdown(f"**{t('twin_neighbors')}**")
     _render_neighbors(portfolio, neighbors)
@@ -132,69 +121,6 @@ def _position_chart(portfolio: Portfolio, customer_id: str) -> go.Figure:
     figure.update_annotations(font={"size": 12, "color": "#5B6B82"}, x=0, xanchor="left")
     figure.update_xaxes(showgrid=True, gridcolor="#DCE4EF", zeroline=False, fixedrange=True, tickfont={"size": 10})
     figure.update_yaxes(tickfont={"size": 11}, fixedrange=True, automargin=True)
-    return figure
-
-
-def _map_chart(
-    portfolio: Portfolio, customer_id: str, neighbors: list[tuple[str, float]], color_metric: str
-) -> go.Figure:
-    coords = portfolio.coords
-    index = {cid: i for i, cid in enumerate(portfolio.ids)}
-    values = portfolio.values(color_metric) * 100
-    me = index[customer_id]
-    hover = [
-        f"{cid} · {portfolio.snapshots[cid].city or '–'}<br>{portfolio.snapshots[cid].age_group} · "
-        f"{BUILDING_TYPES.get(portfolio.snapshots[cid].building_type, portfolio.snapshots[cid].building_type)}<br>"
-        f"{color_metric}: {values[i]:.1f} %"
-        for i, cid in enumerate(portfolio.ids)
-    ]
-
-    figure = go.Figure()
-    for neighbor_id, similarity in neighbors:
-        n = index[neighbor_id]
-        figure.add_trace(
-            go.Scatter(
-                x=[coords[me, 0], coords[n, 0]], y=[coords[me, 1], coords[n, 1]], mode="lines",
-                line={"color": NEIGHBOR, "width": 1 + 3 * similarity, "dash": "dot"},
-                hoverinfo="skip", showlegend=False,
-            )
-        )
-    figure.add_trace(
-        go.Scatter(
-            x=coords[:, 0], y=coords[:, 1], mode="markers",
-            marker={
-                "size": 11, "color": values, "colorscale": PORTAL_SCALE, "cmin": 0,
-                "colorbar": {"title": {"text": "%"}, "thickness": 12},
-                "line": {"color": "#7FA6D6", "width": 1},
-            },
-            text=hover, hovertemplate="%{text}<extra></extra>", name=t("twin_others"),
-        )
-    )
-    neighbor_rows = [index[nid] for nid, _ in neighbors]
-    figure.add_trace(
-        go.Scatter(
-            x=coords[neighbor_rows, 0], y=coords[neighbor_rows, 1], mode="markers",
-            marker={"size": 17, "color": "rgba(0,0,0,0)", "line": {"color": NEIGHBOR, "width": 2.5}},
-            text=[hover[index[neighbor_id]] for neighbor_id, _ in neighbors],
-            hovertemplate="%{text}<extra></extra>", name=t("twin_neighbors"),
-        )
-    )
-    figure.add_trace(
-        go.Scatter(
-            x=[coords[me, 0]], y=[coords[me, 1]], mode="markers+text",
-            marker={"size": 22, "symbol": "star", "color": HIGHLIGHT, "line": {"color": "white", "width": 1.5}},
-            text=[customer_id], textposition="bottom center", textfont={"color": HIGHLIGHT},
-            hovertext=[hover[me]], hovertemplate="%{hovertext}<extra></extra>", name=customer_id,
-        )
-    )
-    figure.update_xaxes(visible=False)
-    figure.update_yaxes(visible=False)
-    figure.update_layout(
-        height=480, margin={"l": 20, "r": 20, "t": 25, "b": 45},
-        legend={"orientation": "h", "y": -0.04, "font": {"size": 11}},
-        font={"family": "Inter, sans-serif", "color": "#1E293B", "size": 12},
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#EDF2F8",
-    )
     return figure
 
 

@@ -14,6 +14,10 @@ import streamlit as st
 
 from core.data import DEMO_DIR, ROOT
 
+# Projektmodule (digital_twin, forecast, geo_heatmap) importierbar machen.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 
 # Ergebnis des Twins in einfachen, cachebaren Strukturen.
 @dataclass(frozen=True)

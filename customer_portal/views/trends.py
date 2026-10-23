@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import altair as alt
 import pandas as pd
-import pydeck as pdk
 import streamlit as st
 
 from core.data import TODAY, home_coords, load_age_group_claims, load_disasters, load_incidents
 from core.twin import load_forecast
+from geo_heatmap import render_heatmap
 from ui.components import empty_state, esc, euro, icon, page_header, render_html
 
 # Feste Farbe je Risikokategorie (Farbe folgt der Kategorie, nicht dem Rang). Geprüfte Reihenfolge.
@@ -25,8 +25,6 @@ GROUP_COLORS = {
     "Vandalismus & Glas": "#eda100",
     "Cyber & Betrug": "#e87ba4",
 }
-# Einfarbige Skala (hell -> dunkel) für die Heatmap.
-HEAT_RANGE = [[205, 226, 251], [158, 197, 244], [109, 167, 236], [57, 135, 229], [37, 106, 191], [16, 66, 129]]
 PERIODS = {"Letzte 3 Monate": 3, "Letzte 6 Monate": 6, "Letzte 12 Monate": 12, "Letzte 24 Monate": 24}
 # Kennzahlen aus forecast.py, die für Kundinnen und Kunden relevant sind (Schlüssel -> Anzeigename).
 FORECAST_METRICS = {"einbrueche": "Einbruch & Diebstahl", "feueralarme": "Feuer & Elektro", "wasserschaeden": "Leitungswasser"}
@@ -107,32 +105,9 @@ def _kpis(data: pd.DataFrame, nature: pd.DataFrame, start: pd.Timestamp) -> None
 def _heatmap(data: pd.DataFrame, nature: pd.DataFrame, region: str) -> None:
     """Zeigt eine interaktive Karte mit Heatmap und Markern."""
     render_html('<h3 class="dt-h3">Regionale Risiko-Heatmap</h3>')
-    points = data.assign(weight=data["severity_level"])[["longitude", "latitude", "weight", "label", "city", "damage_eur"]]
-    layers = [
-        pdk.Layer("HeatmapLayer", points, get_position=["longitude", "latitude"], get_weight="weight",
-                  radius_pixels=45, color_range=HEAT_RANGE, opacity=0.75),
-        pdk.Layer("ScatterplotLayer", points.assign(tip=points["label"] + " · " + points["city"]),
-                  get_position=["longitude", "latitude"], get_radius=1800, radius_min_pixels=3,
-                  get_fill_color=[16, 66, 129, 170], pickable=True),
-        pdk.Layer("ScatterplotLayer", pd.DataFrame([{"lon": _home()[1], "lat": _home()[0], "tip": "Ihr Wohnort"}]),
-                  get_position=["lon", "lat"], get_radius=2500, radius_min_pixels=7, get_fill_color=[0, 55, 129, 255],
-                  get_line_color=[255, 255, 255], line_width_min_pixels=2, stroked=True, pickable=True),
-    ]
-    if not nature.empty:
-        nat = nature.assign(tip=nature["label"] + " · " + nature["city"] + " · Stufe " + nature["severity_level"].astype(str))
-        nat = nat.assign(color=nat["status"].map(lambda s: [208, 59, 59, 210] if s in ("active", "forecast") else [100, 116, 139, 150]))
-        layers.append(pdk.Layer("ScatterplotLayer", nat, get_position=["longitude", "latitude"],
-                                get_radius="affected_radius_km * 300", radius_min_pixels=5, get_fill_color="color",
-                                stroked=True, get_line_color=[255, 255, 255], line_width_min_pixels=1, pickable=True))
+    points = data.assign(weight=data["severity_level"].astype(float), tip=data["label"] + " · " + data["city"])
     center = (data["latitude"].mean(), data["longitude"].mean()) if region != "Deutschland gesamt" else (51.1, 10.4)
-    deck = pdk.Deck(
-        layers=layers,
-        initial_view_state=pdk.ViewState(latitude=center[0], longitude=center[1], zoom=6 if region != "Deutschland gesamt" else 4.8),
-        tooltip={"text": "{tip}"},
-        map_provider="carto",
-        map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-    )
-    st.pydeck_chart(deck, height=380)
+    render_heatmap(points, nature, home=_home(), center=center, zoom=6 if region != "Deutschland gesamt" else 4.8, height=380)
     render_html(
         '<div class="dt-legend"><span><i class="dt-sw dt-sw-heat"></i>Dichte der Vorfälle (gewichtet nach Schwere)</span>'
         '<span><i class="dt-sw dt-sw-home"></i>Ihr Wohnort</span>'
