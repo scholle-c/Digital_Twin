@@ -140,7 +140,7 @@ class Customer:
     id: str
     name: str
     salutation: str
-    age: int
+    age: int | str
     city: str
     housing: str
     priority: int

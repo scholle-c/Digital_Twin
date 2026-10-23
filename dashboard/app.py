@@ -4,7 +4,8 @@ Customer 360 – Beratungscockpit für Versicherungsberater (Streamlit-Prototyp)
 Start:  streamlit run app.py   (im Ordner dashboard/)
 
 Aufbau:
-    data/mock_data.py              synthetische Kundendaten und Datenmodell
+    data/twin_data.py              Kundendaten aus den Digital Twins (Quelle: data_loader)
+    data/mock_data.py              Datenmodell (und frühere synthetische Kundendaten)
     state.py                       st.session_state und Klick-Callbacks
     components/layout.py           CSS, Navigation, Kopfbereich
     components/customer_list.py    priorisierte Kundenliste
@@ -20,7 +21,8 @@ from components.coverage_detail import render_coverage_page
 from components.customer_detail import render_customer_detail
 from components.customer_list import render_customer_list
 from components.layout import load_css, render_header, render_sidebar
-from data.mock_data import ADVISOR, get_customer, get_customers
+from data.twin_data import get_customers
+from data.mock_data import ADVISOR
 from i18n import t
 from state import VIEW_COVERAGE, init_session_state
 
@@ -35,12 +37,14 @@ st.set_page_config(
 # 2. Zentrales CSS mit Design-Tokens laden (Farben, Karten, Klick-Overlays).
 load_css(Path(__file__).parent / "styles" / "dashboard.css")
 
-# 3. Synthetische Daten laden; die Liste ist bereits fachlich priorisiert.
+# 3. Kunden aus ihren Digital Twins laden; die Liste ist bereits fachlich priorisiert.
 customers = get_customers()
 
 # 4. Sitzungszustand initialisieren; standardmäßig ist der wichtigste Kunde ausgewählt.
 init_session_state(default_customer_id=customers[0].id)
-selected_customer = get_customer(st.session_state.selected_customer_id) or customers[0]
+selected_customer = next(
+    (c for c in customers if c.id == st.session_state.selected_customer_id), customers[0]
+)
 selected_coverage = next(
     (c for c in selected_customer.coverages if c.key == st.session_state.selected_coverage), None
 )

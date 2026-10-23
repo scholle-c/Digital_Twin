@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from components.twin_view import render_twin_comparison
 from components.ui import category_class, esc, html_list, icon, render_html, status_badge
 from data.mock_data import Customer
 from i18n import t, tr
@@ -20,6 +21,16 @@ def render_customer_detail(customer: Customer) -> None:
     """Rendert alle Bereiche der Detailansicht für den ausgewählten Kunden."""
     with st.container(key="detail_panel"):
         render_customer_header(customer)
+        tab = st.segmented_control(
+            t("detail_tabs"),
+            options=["overview", "twin"],
+            format_func=lambda key: t(f"tab_{key}"),
+            key="detail_tab",
+            label_visibility="collapsed",
+        )
+        if tab == "twin":
+            render_twin_comparison(customer.id)
+            return
         render_recommendation(customer)
         if st.session_state.guide_open:
             render_conversation_guide(customer)

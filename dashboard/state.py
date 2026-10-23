@@ -27,6 +27,7 @@ def init_session_state(default_customer_id: str) -> None:
     st.session_state.setdefault("noted_questions", [])
     st.session_state.setdefault("reminders", [])
     st.session_state.setdefault("pending_toast", None)
+    st.session_state.setdefault("detail_tab", "overview")
 
 
 # Schließt alle Bereiche, die nur zu einer bestimmten Ansicht gehören.
