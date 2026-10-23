@@ -1,5 +1,7 @@
 from datetime import date
-from interface import DigitalTwin, IoT, load_customer
+from data_loader import load_customer
+from digital_twin import DigitalTwin
+from models import IoT
 
 # C0010: 30-39, engineer, high, semi_detached 1986, Zone 3, Kind am 2026-08-02
 customer = load_customer(
