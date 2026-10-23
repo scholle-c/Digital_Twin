@@ -2,16 +2,23 @@
 
 | Datei | Wer | Inhalt |
 |---|---|---|
-| `interface.py` | beide lesen, KI-Gruppe erweitert | Datenobjekte, `DigitalTwin`-Klasse, CSV-Loader |
+| `models.py` | beide lesen | Eingabe- und Ausgabe-Datenobjekte |
+| `data_loader.py` | KI-Gruppe | CSV-Dateien laden und `Customer`-Objekte erstellen |
+| `digital_twin.py` | KI-Gruppe | Risiko-, Life-Event- und Empfehlungslogik |
+| `interface.py` | UI-Gruppe | Kunden auswählen und Twin-Ergebnisse ausgeben |
 | `config.toml` | KI-Gruppe | alle Raten, Faktoren, Regeln, Texte |
 | `example.py` | UI-Gruppe als Vorlage | zeigt jeden Aufruf einmal |
 
 ## Für die UI-Gruppe
 
 ```python
-from interface import DigitalTwin, IoT, load_customer
+from digital_twin import DigitalTwin
+from data_loader import load_customer
+from models import IoT
 twin = DigitalTwin(load_customer("C0010", iot=IoT(...), contracts=[...]))
 ```
+
+Die CSV-Dateien liegen in `generated_demodata/`; `load_customer()` verwendet diesen Ordner standardmäßig. Ein alternatives Verzeichnis kann mit `folder=...` übergeben werden.
 
 | Aufruf | Rückgabe |
 |---|---|
@@ -36,7 +43,7 @@ Alles in `config.toml`:
 Rechnung: `p_12m = 1 - (1 - base_per_month × alle zutreffenden Faktoren)^12`.
 Faktor < 1 senkt, > 1 erhöht. Was in `when`/`text` erlaubt ist, steht oben in `config.toml`.
 
-Neue Eingabefelder (z. B. Wassersensor): Dataclass in `interface.py` erweitern, Loader anpassen, dann in `config.toml` nutzen.
+Neue Eingabefelder (z. B. Wassersensor): Dataclass in `models.py` erweitern, Loader in `data_loader.py` anpassen, dann in `config.toml` nutzen.
 
 ## Nicht im Scope
 Kein ML, kein LLM in der Entscheidung. Faktoren sind geschätzt, nicht kalibriert.
