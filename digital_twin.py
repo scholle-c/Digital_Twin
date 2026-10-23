@@ -9,14 +9,19 @@ from models import (
     IoT,
     Person,
     Recommendation,
+    RegionalTrend,
     Risk,
+    SimilarityPrediction,
 )
+import forecast as _forecast
+import similarity as _similarity
 
 
 class DigitalTwin:
     def __init__(self, customer: Customer, config_path: str = "config.toml"):
         self.customer = customer
         self.config = tomllib.loads(Path(config_path).read_text(encoding="utf-8"))
+        self._similar_cache: dict[str, SimilarityPrediction] | None = None
 
     @property
     def person(self) -> Person:
@@ -57,6 +62,27 @@ class DigitalTwin:
             output[key] = EventPrediction(key, config["label"], probability, drivers)
         return output
 
+    def similar_events(self, k: int = 5) -> dict[str, SimilarityPrediction]:
+        """Life Events aus ähnlichen Kunden (similarity.py), mit Nachbarn als Begründung."""
+        if self._similar_cache is None:
+            self._similar_cache = _similarity.predict_events(self.person.customer_id, k=k)
+        return self._similar_cache
+
+    def regional_trends(self, steps: int = 12) -> dict[str, RegionalTrend]:
+        """Regionale Kennzahlen (forecast.py) für das Bundesland des Kunden."""
+        region = self.person.federal_state
+        if region not in _forecast.regions():
+            return {}
+        return {
+            metric: RegionalTrend(
+                metric, region,
+                round(_forecast.trend_pct(metric, region), 1),
+                _forecast.trend_label(metric, region),
+                _forecast.forecast(metric, region, steps),
+            )
+            for metric in _forecast.METRICS
+        }
+
     def recommendations(self) -> list[Recommendation]:
         namespace = self._namespace()
         recommendations = []
@@ -96,4 +122,9 @@ class DigitalTwin:
             "drivers": lambda hazard: list(
                 self._evaluate(self.config["hazards"][hazard])[1]
             ),
+            # Neu: Ähnlichkeit und regionaler Trend
+            "similar_p": lambda event: self.similar_events().get(event).p_12m if event in self.similar_events() else 0.0,
+            "similar_ids": lambda event: [n["id"] for n in self.similar_events()[event].neighbors if n["had_event"]] if event in self.similar_events() else [],
+            "trend": lambda metric: self.regional_trends().get(metric).pct_per_year if metric in self.regional_trends() else 0.0,
+            "trend_label": lambda metric: self.regional_trends().get(metric).label if metric in self.regional_trends() else "unbekannt",
         }

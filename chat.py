@@ -55,6 +55,9 @@ def build_context(twin: DigitalTwin) -> dict:
         "risks_12m": {k: asdict(v) for k, v in twin.risks().items()},
         "predicted_events_12m": {k: asdict(v) for k, v in twin.predicted_events().items()},
         "recommendations": [asdict(r) for r in twin.recommendations()],
+        "similar_customers_prediction": {k: asdict(v) for k, v in twin.similar_events().items()},
+        "regional_trends": {k: {"region": v.region, "label": v.label, "forecast_next_3": v.forecast[:3]}
+                            for k, v in twin.regional_trends().items()},
     }
 
 
