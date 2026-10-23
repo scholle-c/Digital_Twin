@@ -19,9 +19,13 @@ from state import select_customer
 def render_customer_list(customers: list[Customer], selected_id: str) -> None:
     """Zeigt die bereits sortierte Kundenliste und markiert den ausgewählten Kunden."""
     with st.container(key="panel_list"):
-        render_html(f'<div class="c360-panel-title" role="heading" aria-level="2">{t("prioritized_customers")}</div>')
-        for rank, customer in enumerate(customers, start=1):
-            render_customer_card(customer, rank, customer.id == selected_id)
+        render_html(
+            f'<div class="c360-panel-title c360-list-heading" role="heading" aria-level="2">'
+            f'{t("prioritized_customers")}<span class="c360-count">{len(customers)}</span></div>'
+        )
+        with st.container(key="customer_queue"):
+            for rank, customer in enumerate(customers, start=1):
+                render_customer_card(customer, rank, customer.id == selected_id)
 
 
 # Eine einzelne, anklickbare Kundenkarte mit Rang, Kategorie, Frist und Begründung.

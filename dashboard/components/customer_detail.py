@@ -168,9 +168,10 @@ def render_conversation_guide(customer: Customer) -> None:
 def render_coverage_cards(customer: Customer) -> None:
     """Zeigt alle Versicherungssparten des Kunden als klickbare Statuskarten."""
     render_html(f'<div class="c360-section-title" role="heading" aria-level="3">{t("current_coverage")}</div>')
-    columns = st.columns(len(customer.coverages), gap="small")
-    for column, coverage in zip(columns, customer.coverages):
-        with column:
+    for index, coverage in enumerate(customer.coverages):
+        if index % 2 == 0:
+            columns = st.columns(2, gap="small")
+        with columns[index % 2]:
             with st.container(key=f"covcard_{customer.id}_{coverage.key}"):
                 render_html(
                     f"""

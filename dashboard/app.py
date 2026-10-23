@@ -39,6 +39,9 @@ load_css(Path(__file__).parent / "styles" / "dashboard.css")
 
 # 3. Kunden aus ihren Digital Twins laden; die Liste ist bereits fachlich priorisiert.
 customers = get_customers()
+# Demo: nur die wichtigsten Kunden auflisten; Auswahl und Twin-Vergleich nutzen weiter alle.
+PRIORITY_LIST_SIZE = 5
+prioritized_customers = customers[:PRIORITY_LIST_SIZE]
 
 # 4. Sitzungszustand initialisieren; standardmäßig ist der wichtigste Kunde ausgewählt.
 init_session_state(default_customer_id=customers[0].id)
@@ -62,9 +65,10 @@ if st.session_state.view == VIEW_COVERAGE and selected_coverage is not None:
 # 6b. Sonst die Übersicht: links die priorisierte Kundenliste, rechts die Details zum Kunden.
 else:
     render_sidebar(active="nav_overview")
-    render_header(ADVISOR, open_customers=len(customers))
-    list_column, detail_column = st.columns([1, 2.1], gap="medium")
-    with list_column:
-        render_customer_list(customers, selected_customer.id)
-    with detail_column:
-        render_customer_detail(selected_customer)
+    render_header(ADVISOR, open_customers=len(prioritized_customers))
+    with st.container(key="workspace"):
+        list_column, detail_column = st.columns([1, 2.8], gap="medium")
+        with list_column:
+            render_customer_list(prioritized_customers, selected_customer.id)
+        with detail_column:
+            render_customer_detail(selected_customer)

@@ -18,8 +18,10 @@ from state import select_customer
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from twin_comparison import Portfolio, build_portfolio, damage_rank, nearest, percentile  # noqa: E402
 
-HIGHLIGHT = "#1f4e8c"
-NEIGHBOR = "#e8a33d"
+HIGHLIGHT = "#003781"
+NEIGHBOR = "#D98A00"
+# Blauverlauf wie in der Heatmap des Kundenportals.
+PORTAL_SCALE = [[0, "#BCD4F2"], [0.5, "#4F8AD1"], [1, "#0A1F44"]]
 BUILDING_TYPES = {
     "apartment": "Wohnung",
     "semi_detached": "Doppelhaushälfte",
@@ -45,12 +47,18 @@ def render_twin_comparison(customer_id: str) -> None:
     _render_kpis(portfolio, customer_id, neighbors)
 
     st.markdown(f"**{t('twin_position')}**")
-    st.plotly_chart(_position_chart(portfolio, customer_id), width="stretch", key="twin_position_chart")
+    st.plotly_chart(
+        _position_chart(portfolio, customer_id), width="stretch", key="twin_position_chart",
+        theme=None, config={"displayModeBar": False, "scrollZoom": False},
+    )
     st.caption(t("twin_position_note"))
 
     st.markdown(f"**{t('twin_map')}**")
     color_metric = st.selectbox(t("twin_color_by"), list(portfolio.metric_groups), key="twin_color_metric")
-    st.plotly_chart(_map_chart(portfolio, customer_id, neighbors, color_metric), width="stretch", key="twin_map_chart")
+    st.plotly_chart(
+        _map_chart(portfolio, customer_id, neighbors, color_metric), width="stretch", key="twin_map_chart",
+        theme=None, config={"displaylogo": False, "scrollZoom": False},
+    )
     st.caption(t("twin_map_note"))
 
     st.markdown(f"**{t('twin_neighbors')}**")
@@ -75,54 +83,55 @@ def _render_kpis(portfolio: Portfolio, customer_id: str, neighbors: list[tuple[s
 def _position_chart(portfolio: Portfolio, customer_id: str) -> go.Figure:
     groups = list(dict.fromkeys(portfolio.metric_groups.values()))
     figure = make_subplots(
-        rows=len(groups), cols=1, subplot_titles=groups, vertical_spacing=0.18,
+        rows=len(groups), cols=1, subplot_titles=groups, vertical_spacing=0.16,
         row_heights=[sum(g == group for g in portfolio.metric_groups.values()) for group in groups],
     )
-    others = [i for i, cid in enumerate(portfolio.ids) if cid != customer_id]
     for row, group in enumerate(groups, start=1):
         metrics = [m for m, g in portfolio.metric_groups.items() if g == group]
-        for y, metric in enumerate(metrics):
-            values = portfolio.values(metric) * 100
-            mine = portfolio.snapshots[customer_id].metrics[metric] * 100
-            first = row == 1 and y == 0
-            figure.add_trace(
-                go.Scatter(
-                    x=values[others], y=[metric] * len(others),
-                    mode="markers",
-                    marker={"color": "rgba(120,120,120,0.35)", "size": 7},
-                    text=[portfolio.ids[i] for i in others],
-                    hovertemplate="%{text}: %{x:.1f} %<extra></extra>",
-                    name=t("twin_others"), legendgroup="others", showlegend=first,
+        mine = [portfolio.snapshots[customer_id].metrics[m] * 100 for m in metrics]
+        average = [float(np.mean(portfolio.values(m))) * 100 for m in metrics]
+        ranks = [percentile(portfolio, customer_id, m) for m in metrics]
+        figure.add_trace(
+            go.Bar(
+                y=metrics, x=average, orientation="h",
+                marker={"color": "#DCE4EF", "cornerradius": 4},
+                text=[f"{v:.1f} %" for v in average], textposition="outside",
+                textfont={"color": "#5B6B82", "size": 11}, cliponaxis=False,
+                hovertemplate="%{y}<br>" + t("twin_average") + ": %{x:.1f} %<extra></extra>",
+                name=t("twin_average"), legendgroup="average", showlegend=row == 1,
+            ),
+            row=row, col=1,
+        )
+        figure.add_trace(
+            go.Bar(
+                y=metrics, x=mine, orientation="h",
+                marker={"color": HIGHLIGHT, "cornerradius": 4},
+                text=[f"<b>{v:.1f} %</b>" for v in mine], textposition="outside", cliponaxis=False,
+                textfont={"color": HIGHLIGHT, "size": 12},
+                customdata=ranks,
+                hovertemplate=(
+                    "%{y}<br>" + customer_id + ": %{x:.1f} %<br>"
+                    + t("twin_outlier_value", p="%{customdata}") + "<extra></extra>"
                 ),
-                row=row, col=1,
-            )
-            figure.add_trace(
-                go.Scatter(
-                    x=[float(np.median(values))], y=[metric], mode="markers",
-                    marker={"symbol": "line-ns-open", "size": 22, "color": "#444", "line": {"width": 2}},
-                    hovertemplate=t("twin_median") + ": %{x:.1f} %<extra></extra>",
-                    name=t("twin_median"), legendgroup="median", showlegend=first,
-                ),
-                row=row, col=1,
-            )
-            figure.add_trace(
-                go.Scatter(
-                    x=[mine], y=[metric], mode="markers",
-                    marker={"size": 15, "color": HIGHLIGHT, "line": {"color": "white", "width": 2}},
-                    hovertemplate=f"{customer_id}: %{{x:.1f}} % · P{percentile(portfolio, customer_id, metric)}<extra></extra>",
-                    name=customer_id, legendgroup="me", showlegend=first,
-                ),
-                row=row, col=1,
-            )
-        figure.update_xaxes(ticksuffix=" %", row=row, col=1)
+                name=customer_id, legendgroup="me", showlegend=row == 1,
+            ),
+            row=row, col=1,
+        )
+        figure.update_xaxes(
+            ticksuffix=" %", range=[0, max(mine + average) * 1.35 or 1], row=row, col=1
+        )
         figure.update_yaxes(autorange="reversed", row=row, col=1)
     figure.update_layout(
-        height=110 + 45 * len(portfolio.metric_groups),
-        margin={"l": 10, "r": 10, "t": 40, "b": 10},
-        legend={"orientation": "h", "y": -0.08},
-        plot_bgcolor="white",
+        barmode="group", bargap=0.35, bargroupgap=0.08,
+        height=130 + 62 * len(portfolio.metric_groups),
+        margin={"l": 10, "r": 45, "t": 45, "b": 45},
+        legend={"orientation": "h", "y": -0.12, "traceorder": "reversed", "font": {"size": 11}},
+        font={"family": "Inter, sans-serif", "color": "#1E293B", "size": 12},
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
     )
-    figure.update_xaxes(showgrid=True, gridcolor="#eee")
+    figure.update_annotations(font={"size": 12, "color": "#5B6B82"}, x=0, xanchor="left")
+    figure.update_xaxes(showgrid=True, gridcolor="#DCE4EF", zeroline=False, fixedrange=True, tickfont={"size": 10})
+    figure.update_yaxes(tickfont={"size": 11}, fixedrange=True, automargin=True)
     return figure
 
 
@@ -154,9 +163,9 @@ def _map_chart(
         go.Scatter(
             x=coords[:, 0], y=coords[:, 1], mode="markers",
             marker={
-                "size": 11, "color": values, "colorscale": "YlOrRd", "cmin": 0,
+                "size": 11, "color": values, "colorscale": PORTAL_SCALE, "cmin": 0,
                 "colorbar": {"title": {"text": "%"}, "thickness": 12},
-                "line": {"color": "white", "width": 1},
+                "line": {"color": "#7FA6D6", "width": 1},
             },
             text=hover, hovertemplate="%{text}<extra></extra>", name=t("twin_others"),
         )
@@ -181,8 +190,10 @@ def _map_chart(
     figure.update_xaxes(visible=False)
     figure.update_yaxes(visible=False)
     figure.update_layout(
-        height=480, margin={"l": 10, "r": 10, "t": 10, "b": 10},
-        legend={"orientation": "h", "y": -0.02}, plot_bgcolor="#fafafa",
+        height=480, margin={"l": 20, "r": 20, "t": 25, "b": 45},
+        legend={"orientation": "h", "y": -0.04, "font": {"size": 11}},
+        font={"family": "Inter, sans-serif", "color": "#1E293B", "size": 12},
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#EDF2F8",
     )
     return figure
 

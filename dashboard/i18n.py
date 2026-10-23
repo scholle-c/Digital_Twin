@@ -21,6 +21,9 @@ LANGUAGES = ("de", "en")
 UI_TEXT: dict[str, dict[str, str]] = {
     # Navigation und Kopfbereich
     "nav_aria": {"de": "Hauptnavigation", "en": "Main navigation"},
+    "logo_sub": {"de": "Beratercockpit · Prototyp", "en": "Advisor cockpit · prototype"},
+    "workspace_label": {"de": "Beratung / Kundenübersicht", "en": "Advisory / Customer overview"},
+    "advisor_role": {"de": "Versicherungsberatung", "en": "Insurance advisor"},
     "nav_overview": {"de": "Übersicht", "en": "Overview"},
     "nav_customers": {"de": "Kunden", "en": "Customers"},
     "nav_tasks": {"de": "Aufgaben", "en": "Tasks"},
@@ -37,8 +40,8 @@ UI_TEXT: dict[str, dict[str, str]] = {
     "twin_outlier_value": {"de": "höher als {p} % der Kunden", "en": "higher than {p}% of customers"},
     "twin_position": {"de": "Position im Bestand", "en": "Position in the portfolio"},
     "twin_position_note": {
-        "de": "Graue Punkte = andere Twins, Strich = Median, blauer Punkt = dieser Kunde. Werte: Wahrscheinlichkeit in den nächsten 12 Monaten.",
-        "en": "Grey dots = other twins, line = median, blue dot = this customer. Values: probability within the next 12 months.",
+        "de": "Blauer Balken = dieser Kunde, grauer Balken = Durchschnitt aller Twins. P = Perzentil (höher als P % der Kunden). Werte: Wahrscheinlichkeit in den nächsten 12 Monaten.",
+        "en": "Blue bar = this customer, grey bar = average of all twins. P = percentile (higher than P% of customers). Values: probability within the next 12 months.",
     },
     "twin_map": {"de": "Twin-Landkarte", "en": "Twin map"},
     "twin_map_note": {
@@ -49,6 +52,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
     "twin_neighbors": {"de": "Ähnlichste Twins", "en": "Most similar twins"},
     "twin_others": {"de": "Andere Twins", "en": "Other twins"},
     "twin_median": {"de": "Median", "en": "Median"},
+    "twin_average": {"de": "Ø alle Twins", "en": "Avg. all twins"},
     "twin_open": {"de": "{id} öffnen", "en": "Open {id}"},
     "lang_switch": {"de": "English", "en": "Deutsch"},
     "lang_switch_help": {"de": "Switch to English", "en": "Auf Deutsch umschalten"},
