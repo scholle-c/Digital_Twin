@@ -173,10 +173,10 @@ def _map_chart(
     neighbor_rows = [index[nid] for nid, _ in neighbors]
     figure.add_trace(
         go.Scatter(
-            x=coords[neighbor_rows, 0], y=coords[neighbor_rows, 1], mode="markers+text",
+            x=coords[neighbor_rows, 0], y=coords[neighbor_rows, 1], mode="markers",
             marker={"size": 17, "color": "rgba(0,0,0,0)", "line": {"color": NEIGHBOR, "width": 2.5}},
-            text=[nid for nid, _ in neighbors], textposition="top center", textfont={"size": 10},
-            hoverinfo="skip", name=t("twin_neighbors"),
+            text=[hover[index[neighbor_id]] for neighbor_id, _ in neighbors],
+            hovertemplate="%{text}<extra></extra>", name=t("twin_neighbors"),
         )
     )
     figure.add_trace(

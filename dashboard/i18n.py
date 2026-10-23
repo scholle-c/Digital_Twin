@@ -40,8 +40,8 @@ UI_TEXT: dict[str, dict[str, str]] = {
     "twin_outlier_value": {"de": "höher als {p} % der Kunden", "en": "higher than {p}% of customers"},
     "twin_position": {"de": "Position im Bestand", "en": "Position in the portfolio"},
     "twin_position_note": {
-        "de": "Blauer Balken = dieser Kunde, grauer Balken = Durchschnitt aller Twins. P = Perzentil (höher als P % der Kunden). Werte: Wahrscheinlichkeit in den nächsten 12 Monaten.",
-        "en": "Blue bar = this customer, grey bar = average of all twins. P = percentile (higher than P% of customers). Values: probability within the next 12 months.",
+        "de": "Wahrscheinlichkeit innerhalb der nächsten 12 Monate. Modellschätzungen, keine bestätigten Ereignisse.",
+        "en": "Probability within the next 12 months. Model estimates, not confirmed events.",
     },
     "twin_map": {"de": "Twin-Landkarte", "en": "Twin map"},
     "twin_map_note": {
