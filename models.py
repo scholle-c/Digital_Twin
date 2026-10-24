@@ -87,6 +87,20 @@ class Recommendation:
     reason: str
 
 @dataclass
+class NextBestAction:
+    """Eine Handlung für den Berater, abgeleitet aus Regeln, Risiken, Ähnlichkeit und Region."""
+    action_type: str                # talk / offer / service / risk / none
+    label: str                      # Anzeigename der Handlung
+    product: str                    # betroffenes Produkt oder ""
+    category: str                   # prevention / gap / cross_sell / none
+    timing: str                     # "Diese Woche" / "Diesen Monat" / "Beim nächsten Kontakt" / "Nächste Prüfung in 90 Tagen"
+    confidence: float               # 0..1
+    reason: str                     # ein Satz
+    signals: list[str]              # Belege: Life Events, Treiber, ähnliche Kunden, regionaler Trend
+    alternatives: list[str]         # weitere offene Empfehlungen
+
+
+@dataclass
 class SimilarityPrediction:
     """Life Event aus ähnlichen Kunden: p_12m plus die Nachbarn als Begründung."""
     event: str

@@ -580,3 +580,6 @@ header[data-testid="stHeader"],
   .st-key-detail_panel { animation: c360-reveal 220ms ease-out; }
   @keyframes c360-reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 }
+
+/* Breitere Sidebar für den Kunden-Chat */
+section[data-testid="stSidebar"] { width: 340px !important; min-width: 340px !important; }

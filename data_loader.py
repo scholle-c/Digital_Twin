@@ -13,6 +13,11 @@ def _read_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(file))
 
 
+def _default_smoke_detector(customer_id: str) -> bool:
+    idx = int(customer_id[1:]) if customer_id[1:].isdigit() else 0
+    return idx % 5 != 0
+
+
 def _date_or_none(value: str | None) -> date | None:
     return date.fromisoformat(value) if value else None
 
@@ -61,9 +66,37 @@ def load_customer(
             house["basement"] == "True",
             int(house["amount_of_floors"]),
         ),
-        iot=iot if iot is not None else IoT(),
+        # Demo-Annahme ohne Sensor-CSV: 80 % der Haushalte haben einen Rauchmelder (deterministisch je ID)
+        iot=iot if iot is not None else IoT(smoke_detector=_default_smoke_detector(customer_id)),
         life_events=life_events,
     )
+
+
+# Fiktive Klarnamen, deterministisch aus Kunden-ID und Geschlecht. customers.csv enthält keine Namen.
+# Hat das Kundenportal einen Namen in portal_profiles.csv gespeichert, gilt dieser.
+FIRST_NAMES = {
+    "female": ["Anna", "Lena", "Maria", "Sophie", "Laura", "Julia", "Sarah", "Lisa", "Katharina", "Nina"],
+    "male": ["Max", "Lukas", "Jonas", "Felix", "Paul", "Tim", "Jan", "Niklas", "David", "Tobias"],
+    "diverse": ["Alex", "Kim", "Robin", "Sascha", "Toni", "Luca", "Noah", "Mika", "Jesse", "Charlie"],
+}
+LAST_NAMES = ["Bauer", "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Hoffmann"]
+
+
+def display_name(customer_id: str, gender: str = "diverse", folder: str | Path | None = None) -> tuple[str, str]:
+    """(Vorname, Nachname) für einen Kunden; aus portal_profiles.csv, sonst deterministisch erzeugt."""
+    folder = Path(folder) if folder is not None else DATA_FOLDER
+    overlay = folder / "portal_profiles.csv"
+    if overlay.exists():
+        row = next((r for r in _read_rows(overlay) if r["customer_id"] == customer_id), None)
+        if row and row.get("first_name") and row.get("last_name"):
+            return row["first_name"], row["last_name"]
+    idx = int(customer_id[1:]) if customer_id[1:].isdigit() else 0
+    return FIRST_NAMES.get(gender, FIRST_NAMES["diverse"])[idx % 10], LAST_NAMES[(idx // 10) % 10]
+
+
+def salutation(gender: str) -> str:
+    """Anrede passend zum Geschlecht."""
+    return {"female": "Frau", "male": "Herr"}.get(gender, "")
 
 
 def load_all_customers(folder: str | Path | None = None) -> dict[str, Customer]:

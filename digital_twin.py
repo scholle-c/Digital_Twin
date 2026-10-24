@@ -7,6 +7,7 @@ from models import (
     EventPrediction,
     House,
     IoT,
+    NextBestAction,
     Person,
     Recommendation,
     RegionalTrend,
@@ -82,6 +83,56 @@ class DigitalTwin:
             )
             for metric in _forecast.METRICS
         }
+
+    def next_best_action(self) -> NextBestAction:
+        """Genau eine Handlung für den Berater: Prävention vor Lücke vor Cross-Sell, mit Belegen und Konfidenz.
+
+        Konfidenz: Fakt (gemeldetes Life Event) hoch, Risikoscore mittel, reine Prognose aus ähnlichen Kunden niedrig.
+        Ohne ausreichende Evidenz ist das Ergebnis bewusst "keine Aktion".
+        """
+        order = {"prevention": 0, "gap": 1, "cross_sell": 2}
+        recs = sorted(self.recommendations(), key=lambda r: (order.get(r.category, 9), r.priority))
+        similar = self.similar_events()
+        trends = self.regional_trends()
+        if not recs:
+            weak = [f"{p.event}: {p.p_12m:.0%} laut ähnlichen Kunden" for p in similar.values() if p.p_12m >= 0.5]
+            return NextBestAction(
+                "none", "Keine Aktion", "", "none", "Nächste Prüfung in 90 Tagen", 0.8,
+                "Keine Deckungslücke, kein erhöhtes Risiko und kein aktuelles Life Event erkannt.",
+                weak or ["Alle Signale unauffällig"], [],
+            )
+        top = recs[0]
+        signals: list[str] = []
+        confidence = {"prevention": 0.7, "gap": 0.75, "cross_sell": 0.6}[top.category]
+
+        # 1. Life Events als Fakt
+        recent = [e for e in self.customer.life_events if (TODAY - e.date).days <= 365]
+        for e in sorted(recent, key=lambda e: e.date, reverse=True)[:2]:
+            signals.append(f"Life Event {e.type} am {e.date:%d.%m.%Y}")
+            if top.category == "cross_sell":
+                confidence = 0.9
+        # 2. Treiber der zugehörigen Gefahr
+        for hazard, risk in self.risks().items():
+            if risk.drivers and risk.p_12m >= 0.03:
+                signals.append(f"{risk.label} {risk.p_12m:.0%} in 12 Mon.: " + ", ".join(risk.drivers))
+        # 3. Ähnliche Kunden
+        for ev, pred in similar.items():
+            hits = [n["id"] for n in pred.neighbors if n["had_event"]]
+            if pred.p_12m >= 0.5:
+                signals.append(f"{len(hits)} von {len(pred.neighbors)} ähnlichen Kunden hatten {ev} ({', '.join(hits[:3])})")
+                confidence = min(1.0, confidence + 0.05)
+        # 4. Regionaler Trend
+        for metric, tr in trends.items():
+            if metric != "kuendigungen" and tr.pct_per_year >= 10:
+                signals.append(f"Region {tr.region}: {metric} {tr.label}")
+
+        timing = {1: "Diese Woche", 2: "Diesen Monat", 3: "Beim nächsten Kontakt"}.get(top.priority, "Beim nächsten Kontakt")
+        action_type = {"prevention": "risk", "gap": "talk", "cross_sell": "offer"}[top.category]
+        label = {"risk": "Risikogespräch", "talk": "Deckungslücke besprechen", "offer": "Angebot unterbreiten"}[action_type]
+        return NextBestAction(
+            action_type, label, top.product, top.category, timing, round(confidence, 2), top.reason,
+            signals[:6], [f"{r.product}: {r.reason}" for r in recs[1:4]],
+        )
 
     def recommendations(self) -> list[Recommendation]:
         namespace = self._namespace()

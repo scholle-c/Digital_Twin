@@ -10,6 +10,7 @@ from pathlib import Path
 import streamlit as st
 
 from components.ui import esc, icon, render_html
+from components.ai import ai_available, chat_answer
 from i18n import t
 from state import toggle_language
 
@@ -65,6 +66,7 @@ def render_sidebar(active: str = "nav_overview") -> None:
             help=t("lang_switch_help"),
             on_click=toggle_language,
         )
+        render_chat()
     with st.container(key="mobile_header"):
         brand, language = st.columns([4, 1], vertical_alignment="center")
         with brand:
@@ -74,6 +76,30 @@ def render_sidebar(active: str = "nav_overview") -> None:
                 t("lang_switch"), key="mobile_lang_toggle", icon=":material/translate:",
                 help=t("lang_switch_help"), on_click=toggle_language,
             )
+
+
+# Kleiner Chat zum ausgewählten Kunden in der Sidebar. Verlauf je Kunde in st.session_state.chat.
+def render_chat() -> None:
+    """Fragen an den Digital Twin des ausgewählten Kunden, beantwortet von Claude über chat.py."""
+    customer_id = st.session_state.get("selected_customer_id")
+    if not customer_id:
+        return
+    st.markdown(f"**{t('chat_title', id=customer_id)}**")
+    if not ai_available():
+        st.caption(t("ai_no_key"))
+        return
+    history = st.session_state.setdefault("chat", {}).setdefault(customer_id, [])
+    with st.container(height=260, key="chat_log"):
+        if not history:
+            st.caption(t("chat_hint"))
+        for message in history[-8:]:
+            with st.chat_message("user" if message["role"] == "user" else "assistant"):
+                st.markdown(message["content"])
+    prompt = st.chat_input(t("chat_placeholder"), key="chat_input")
+    if prompt:
+        with st.spinner(t("chat_thinking")):
+            chat_answer(customer_id, prompt, history)   # schreibt Frage und Antwort in history
+        st.rerun()
 
 
 # Wählt die Begrüßung passend zur Tageszeit.

@@ -17,7 +17,8 @@ from data.mock_data import CATEGORIES, Coverage, Customer, Event, Reason, Signal
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Projektmodule (data_loader, digital_twin) liegen oberhalb von dashboard/.
 sys.path.append(str(PROJECT_ROOT))
-from data_loader import load_all_customers  # noqa: E402
+from dataclasses import asdict  # noqa: E402
+from data_loader import display_name, load_all_customers, salutation  # noqa: E402
 from digital_twin import DigitalTwin  # noqa: E402
 from models import TODAY  # noqa: E402
 from models import Customer as TwinCustomer  # noqa: E402
@@ -161,10 +162,12 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
     ]
     max_risk = max((r.p_12m for r in risks.values()), default=0)
 
+    first, last = display_name(customer_id, person.gender)
+    title = salutation(person.gender)
     customer = Customer(
         id=customer_id,
-        name=f"Kunde {customer_id}",
-        salutation=f"Kunde {customer_id}",
+        name=f"{first} {last}",
+        salutation=f"{title} {last}".strip(),
         age=person.age_group,
         city=person.city or NOT_SPECIFIED,
         housing=f"{housing}, Baujahr {house.year}",
@@ -188,18 +191,23 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
         ),
         conversation_questions=[f"Darf ich Ihnen kurz erläutern, was {r.product} für Sie bedeutet?" for r in recommendations[:3]],
         conversation_goal=(
-            f"Gemeinsam klären, ob {top.product} für die Kundin bzw. den Kunden sinnvoll ist."
+            f"Gemeinsam klären, ob {top.product} für {title + ' ' + last if title else first + ' ' + last} sinnvoll ist."
             if top else "Aktuelle Situation und Absicherung bestätigen."
         ),
+        next_action=asdict(twin.next_best_action()),
     )
     sort_key = (CATEGORIES[category].order, rec_priority, -max_risk)
     return sort_key, customer
 
 
-# Kurzer TTL: Klicks bleiben schnell, geänderte Quelldaten erscheinen nach wenigen Sekunden.
-@st.cache_data(ttl=10, show_spinner=False)
-def get_customers() -> list[Customer]:
-    """Alle Kunden aus ihren Digital Twins, sortiert nach Kategorie, Empfehlungspriorität und höchstem Risiko."""
+def _data_stamp() -> float:
+    folder = PROJECT_ROOT / "generated_demodata"
+    return max((f.stat().st_mtime for f in folder.glob("*.csv")), default=0.0)
+
+
+# Neu berechnet nur, wenn sich eine CSV ändert (vorher alle 10 s, bei 250 Kunden spürbar).
+@st.cache_data(show_spinner="Kunden werden aus ihren Digital Twins geladen …")
+def _customers(stamp: float) -> list[Customer]:
     ranked = sorted(
         (_build_customer(twin_customer) for twin_customer in load_all_customers().values()),
         key=lambda item: item[0],
@@ -208,6 +216,11 @@ def get_customers() -> list[Customer]:
     for rank, customer in enumerate(customers, start=1):
         customer.priority = rank
     return customers
+
+
+def get_customers() -> list[Customer]:
+    """Alle Kunden aus ihren Digital Twins, sortiert nach Kategorie, Empfehlungspriorität und höchstem Risiko."""
+    return _customers(_data_stamp())
 
 
 def get_customer(customer_id: str) -> Customer | None:

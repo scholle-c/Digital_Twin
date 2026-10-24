@@ -19,6 +19,10 @@ import streamlit as st
 # Projektwurzel (enthält digital_twin.py, config.toml und generated_demodata/).
 ROOT = Path(__file__).resolve().parents[2]
 DEMO_DIR = ROOT / "generated_demodata"
+import sys as _sys
+if str(ROOT) not in _sys.path:
+    _sys.path.insert(0, str(ROOT))
+from data_loader import display_name  # noqa: E402  (gleiche Klarnamen wie im Berater-Dashboard)
 
 # Stichtag des Prototyps; identisch mit TODAY in models.py.
 TODAY = date(2026, 10, 23)
@@ -67,13 +71,6 @@ OCCUPATION_CODES = {v: k for k, v in OCCUPATIONS.items()}
 RELATIONSHIP_CODES = {v: k for k, v in RELATIONSHIP.items()}
 INTEREST_CODES = {v: k for k, v in INTERESTS.items()}
 
-# Fiktive Namen, deterministisch aus der Kunden-ID. customers.csv enthält keine Namen.
-FIRST_NAMES = {
-    "female": ["Anna", "Lena", "Maria", "Sophie", "Laura", "Julia", "Sarah", "Lisa", "Katharina", "Nina"],
-    "male": ["Max", "Lukas", "Jonas", "Felix", "Paul", "Tim", "Jan", "Niklas", "David", "Tobias"],
-    "diverse": ["Alex", "Kim", "Robin", "Sascha", "Toni", "Luca", "Noah", "Mika", "Jesse", "Charlie"],
-}
-LAST_NAMES = ["Bauer", "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Hoffmann"]
 
 # Spalten, die nur das Portal kennt (nicht in customers.csv). Liegen in portal_profiles.csv.
 PORTAL_FIELDS = ["first_name", "last_name", "street", "email", "phone", "children", "household_size",
@@ -126,8 +123,8 @@ def initial_profile(customer_id: str) -> dict:
     """Gibt das Startprofil eines Kunden als Dict zurück."""
     row = customer_row(customer_id)
     extra = _portal_row(customer_id)
-    idx = int(customer_id[1:]) if customer_id[1:].isdigit() else 0
     gender = row.get("gender", "diverse")
+    first, last = display_name(customer_id, gender)
     children = sum(1 for e in _read_csv("life_events.csv") if e["customer_id"] == customer_id and e["event_type"] == "kind")
     relationship = RELATIONSHIP.get(row.get("relationship_status", "single"), "Ledig")
     partner = relationship in ("Verheiratet", "In Partnerschaft")
@@ -139,8 +136,8 @@ def initial_profile(customer_id: str) -> dict:
         "customer_number": customer_id,
         "customer_since": since,
         "federal_state": row.get("federal_state", ""),
-        "first_name": extra.get("first_name") or FIRST_NAMES.get(gender, FIRST_NAMES["diverse"])[idx % 10],
-        "last_name": extra.get("last_name") or LAST_NAMES[(idx // 10) % 10],
+        "first_name": first,
+        "last_name": last,
         "birth_date": birth,
         "street": extra.get("street") or "Musterstraße 1",
         "postal_code": row.get("postal_code", "00000"),

@@ -160,6 +160,8 @@ class Customer:
     conversation_opening: str
     conversation_questions: list[str]
     conversation_goal: str
+    # Handlungsempfehlung aus dem Digital Twin (NextBestAction als Dict) – None bei Mockdaten.
+    next_action: dict | None = None
 
 
 # ============================================================

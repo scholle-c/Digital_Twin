@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from components.ai import ai_available, conversation_report
 from components.region_view import render_region_view
 from components.twin_view import render_twin_comparison
 from components.ui import category_class, esc, html_list, icon, render_html, status_badge
@@ -35,8 +36,9 @@ def render_customer_detail(customer: Customer) -> None:
             render_region_view(customer.id)
             return
         render_recommendation(customer)
-        if st.session_state.guide_open:
-            render_conversation_guide(customer)
+        render_next_action(customer)
+        if st.session_state.guide_open and not render_ai_report(customer):
+            render_conversation_guide(customer)      # regelbasierter Leitfaden als Fallback
         render_coverage_cards(customer)
         render_timeline(customer)
 
@@ -125,6 +127,68 @@ def render_recommendation(customer: Customer) -> None:
                 icon=":material/description:",
                 on_click=toggle_guide,
             )
+
+
+# ------------------------------------------------------------
+# Handlungsempfehlung aus dem Digital Twin (Next Best Action)
+# ------------------------------------------------------------
+
+ACTION_ICONS = {"risk": "warning", "talk": "shield", "offer": "target", "none": "check"}
+
+
+def render_next_action(customer: Customer) -> None:
+    """Zeigt die eine empfohlene Handlung mit Zeitpunkt, Konfidenz, Belegen und Alternativen."""
+    action = customer.next_action
+    if not action:
+        return
+    signals = html_list(action["signals"]) if action["signals"] else ""
+    alternatives = html_list(action["alternatives"]) if action["alternatives"] else f"<p class=\"c360-muted\">{t('nba_no_alternatives')}</p>"
+    confidence = int(round(action["confidence"] * 100))
+    category = action["category"] if action["category"] != "none" else "cross_sell"
+    with st.container(key="nba_box"):
+        render_html(
+            f"""
+            <div class="c360-reco {category_class(category)}" style="margin-top:12px">
+                <div class="c360-reco-head">
+                    <span class="c360-icon-circle c360-icon-circle-lg">{icon(ACTION_ICONS.get(action["action_type"], "info"))}</span>
+                    <div>
+                        <div class="c360-kicker">{t("nba_title")}</div>
+                        <div class="c360-reco-title" role="heading" aria-level="2">{esc(action["label"])}{(" · " + esc(action["product"])) if action["product"] else ""}</div>
+                    </div>
+                </div>
+                <div class="c360-reco-text"><span>{esc(action["reason"])}</span></div>
+                <div class="c360-goal"><strong>{t("nba_timing")}:</strong> {esc(action["timing"])} &nbsp;·&nbsp;
+                    <strong>{t("nba_confidence")}:</strong> {confidence} %</div>
+                <div class="c360-guide-grid" style="margin-top:10px">
+                    <div><div class="c360-label">{t("nba_signals")}</div>{signals}</div>
+                    <div><div class="c360-label">{t("nba_alternatives")}</div>{alternatives}</div>
+                </div>
+            </div>
+            """
+        )
+
+
+# ------------------------------------------------------------
+# KI-Bericht (Claude) zur Gesprächsvorbereitung
+# ------------------------------------------------------------
+
+def render_ai_report(customer: Customer) -> bool:
+    """Knapper KI-Bericht. Gibt True zurück, wenn er angezeigt wurde, sonst folgt der regelbasierte Leitfaden."""
+    if not ai_available():
+        st.info(t("ai_no_key"))
+        return False
+    with st.spinner(t("ai_generating")):
+        report = conversation_report(customer.id, st.session_state.lang, customer.name)
+    if report is None:
+        return False
+    if report.startswith("__error__:"):
+        st.warning(t("ai_error", error=report.removeprefix("__error__:")[:200]))
+        return False
+    with st.container(key="ai_report_box"):
+        st.markdown(f"**{t('ai_report_title', name=customer.name)}**")
+        st.markdown(report)
+        st.caption(t("ai_report_note"))
+    return True
 
 
 # ------------------------------------------------------------
