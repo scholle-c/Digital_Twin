@@ -343,3 +343,17 @@ code { background: var(--sky); color: var(--blue); padding: 0 .3rem; border-radi
   .st-key-bottom_nav [data-testid="stBaseButton-primary"] p { color: var(--blue); font-weight: 700; }
   .st-key-bottom_nav [data-testid="stPopover"] button svg { display: none; }
 }
+
+/* Umzugs-Check: farbkodierter Vergleich Wohnort vs. Zielort */
+.dt-cmp { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: .4rem 0 .6rem; font-size: .92rem; }
+.dt-cmp-row { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr; align-items: center; gap: .5rem; padding: .55rem .8rem; border-top: 1px solid #EEF2F7; }
+.dt-cmp-head { background: #F6F8FB; border-top: 0; font-weight: 700; color: var(--navy); }
+.dt-cmp-head small { display: block; font-weight: 500; color: var(--muted); font-size: .75rem; }
+.dt-cmp-label { color: var(--muted); font-weight: 500; }
+.dt-cmp-home { color: var(--navy); font-weight: 600; }
+.dt-cmp-target { color: var(--navy); font-weight: 700; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.dt-cmp-ok .dt-cmp-target { background: var(--ok-bg); border-radius: 8px; padding: .25rem .5rem; }
+.dt-cmp-danger .dt-cmp-target { background: var(--danger-bg); border-radius: 8px; padding: .25rem .5rem; }
+.dt-cmp-neutral .dt-cmp-target { background: var(--neutral-bg); border-radius: 8px; padding: .25rem .5rem; }
+.dt-cmp .dt-badge { font-size: .72rem; padding: .1rem .45rem; }
+@media (max-width: 640px) { .dt-cmp-row { grid-template-columns: 1fr; gap: .2rem; } .dt-cmp-label { font-size: .8rem; } }

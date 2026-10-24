@@ -176,17 +176,37 @@ def _place_check(profile: dict, home: dict) -> None:
 
     crime_home = home["crime_region"] / max(home["crime_all"], 0.01)
     crime_there = there["crime_region"] / max(there["crime_all"], 0.01)
+
+    # Zeilen: (Label, Wert Wohnort, Wert Ziel, Richtung: +1 = Ziel besser, -1 = Ziel schlechter, 0 = ähnlich, Delta-Text)
+    def row_num(label, a, b, fmt, higher_is_better, unit=""):
+        diff = b - a
+        tol = 0.03 if fmt in ("pct", "rel") else 0.5     # 3 Prozentpunkte bzw. ein halbes Ereignis gelten als "ähnlich"
+        direction = 0 if abs(diff) <= tol else (1 if (diff > 0) == higher_is_better else -1)
+        show = (lambda v: f"{v:.0%}") if fmt == "pct" else (lambda v: f"{v:+.0%}") if fmt == "rel" else (lambda v: f"{v:.0f}{unit}")
+        delta = ("±0" if direction == 0 else (f"{diff:+.0%}" if fmt in ("pct", "rel") else f"{diff:+.0f}"))
+        return label, show(a), show(b), direction, delta
+
     rows = [
-        ("Einbrüche vs. Bundesschnitt", f"{crime_home - 1:+.0%}", f"{crime_there - 1:+.0%}", "ok" if crime_there <= crime_home else "warn"),
-        ("Singles", pct(home["singles"]), pct(there["singles"]), "info"),
-        (f"In Ihrem Alter ({home['my_age']})", pct(home["same_age"]), pct(there["same_age"]), "info"),
-        ("Naturereignisse aktiv/erwartet", str(home["nearby_disasters"]), str(there["nearby_disasters"]),
-         "ok" if there["nearby_disasters"] <= home["nearby_disasters"] else "warn"),
-        ("Typische Interessen", ", ".join(home["top_interests"]), ", ".join(there["top_interests"]), "info"),
+        row_num("Einbrüche vs. Bundesschnitt", crime_home - 1, crime_there - 1, "rel", higher_is_better=False),
+        row_num("Singles", home["singles"], there["singles"], "pct", higher_is_better=True),
+        row_num(f"In Ihrem Alter ({home['my_age']})", home["same_age"], there["same_age"], "pct", higher_is_better=True),
+        row_num("Naturereignisse aktiv/erwartet", home["nearby_disasters"], there["nearby_disasters"], "int", higher_is_better=False),
+        ("Typische Interessen", ", ".join(home["top_interests"]), ", ".join(there["top_interests"]), 0, ""),
     ]
-    table = "".join(f"<tr><td>{esc(k)}</td><td>{esc(a)}</td><td><b>{esc(b)}</b></td></tr>" for k, a, b, _ in rows)
-    render_html(f'<table class="dt-table" style="width:100%"><thead><tr><th></th><th>{esc(profile["city"])} (heute)</th>'
-                f'<th>{esc(target)}</th></tr></thead><tbody>{table}</tbody></table>')
+    tone = {1: ("ok", "arrow_upward"), -1: ("danger", "arrow_downward"), 0: ("neutral", "remove")}
+    body = ""
+    for label, a, b, direction, delta in rows:
+        cls, arrow = tone[direction]
+        delta_html = f'<span class="dt-badge dt-badge-{cls}">{icon(arrow, "ms-sm")}{esc(delta)}</span>' if delta else ""
+        body += (f'<div class="dt-cmp-row dt-cmp-{cls}"><div class="dt-cmp-label">{esc(label)}</div>'
+                 f'<div class="dt-cmp-home">{esc(a)}</div><div class="dt-cmp-target">{esc(b)}{delta_html}</div></div>')
+    better = sum(1 for r in rows if r[3] == 1); worse = sum(1 for r in rows if r[3] == -1)
+    render_html(
+        f'<div class="dt-cmp"><div class="dt-cmp-row dt-cmp-head"><div class="dt-cmp-label"></div>'
+        f'<div class="dt-cmp-home">{esc(profile["city"])}<small>heute</small></div>'
+        f'<div class="dt-cmp-target">{esc(target)}<small>{better} besser · {worse} schlechter</small></div></div>{body}</div>'
+        f'<p class="dt-tiny">Grün: {esc(target)} schneidet besser ab, Rot: schlechter, Grau: ähnlich. Verglichen aus Sicht einer Person, die Sicherheit und Menschen in ihrer Lebenssituation sucht.</p>'
+    )
 
     verdict = []
     verdict.append("sicherer als Ihr Wohnort" if crime_there < crime_home * 0.9 else
