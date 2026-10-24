@@ -91,8 +91,10 @@ def render(ctx: dict) -> None:
 def _my_region(profile: dict) -> None:
     """Zeigt Karten wie „Ihre Gegend ist sicher“ oder „Viele Menschen in Ihrem Alter“."""
     r = region_insights(profile)
-    render_html(f'<h3 class="dt-h3">Meine Region: {esc(r["label"])}</h3>'
-                f'<p class="dt-tiny">Abgeleitet aus {r["n"]} anonymisierten Kundenprofilen in Ihrer Umgebung und den regionalen Vorfalldaten.</p>')
+    source = (f"Demo-Regionsprofil für {esc(r['label'].split(' (')[0])} plus {r['n']} anonymisierte Kundenprofile und regionale Vorfalldaten"
+              if "Demo-Regionsprofil" in r["label"]
+              else f"Abgeleitet aus {r['n']} anonymisierten Kundenprofilen in Ihrer Umgebung und den regionalen Vorfalldaten")
+    render_html(f'<h3 class="dt-h3">Meine Region: {esc(r["label"])}</h3><p class="dt-tiny">{source}.</p>')
     cards = []
 
     # 1. Sicherheit

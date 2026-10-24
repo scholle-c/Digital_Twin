@@ -224,13 +224,38 @@ def add_life_event(customer_id: str, event_type: str, event_date: date) -> None:
 
 LOOKING = {"single", "divorced", "widowed"}
 
+# Demo-Regionsprofile: greifen, wenn in der Umgebung weniger als MIN_SAMPLE echte Kundenprofile liegen.
+# Werte sind Annahmen zur Veranschaulichung (Single-Anteil, Anteil je Altersgruppe, Interessen,
+# Einbruchsindex relativ zum Bundesdurchschnitt: 0.8 = 20 % darunter).
+MIN_SAMPLE = 10
+REGION_PROFILES = {
+    "Erlangen":  {"singles": 0.52, "ages": {"20-29": 0.41, "30-39": 0.27, "40-49": 0.14, "50-59": 0.10, "60-69": 0.08},
+                  "interests": ["music", "cycling", "fitness"], "crime_index": 0.78},
+    "Nürnberg":  {"singles": 0.44, "ages": {"20-29": 0.26, "30-39": 0.28, "40-49": 0.20, "50-59": 0.14, "60-69": 0.12},
+                  "interests": ["football", "music", "travel"], "crime_index": 1.12},
+    "Fürth":     {"singles": 0.38, "ages": {"20-29": 0.22, "30-39": 0.27, "40-49": 0.22, "50-59": 0.16, "60-69": 0.13},
+                  "interests": ["football", "gardening", "cooking"], "crime_index": 0.95},
+    "München":   {"singles": 0.47, "ages": {"20-29": 0.24, "30-39": 0.31, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
+                  "interests": ["travel", "fitness", "skiing"], "crime_index": 1.05},
+    "Bayreuth":  {"singles": 0.40, "ages": {"20-29": 0.30, "30-39": 0.22, "40-49": 0.18, "50-59": 0.15, "60-69": 0.15},
+                  "interests": ["hiking", "music", "football"], "crime_index": 0.72},
+    "Augsburg":  {"singles": 0.36, "ages": {"20-29": 0.21, "30-39": 0.26, "40-49": 0.22, "50-59": 0.17, "60-69": 0.14},
+                  "interests": ["cycling", "cooking", "gardening"], "crime_index": 0.90},
+    "Berlin":    {"singles": 0.55, "ages": {"20-29": 0.25, "30-39": 0.30, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
+                  "interests": ["art", "music", "travel"], "crime_index": 1.35},
+    "Hamburg":   {"singles": 0.49, "ages": {"20-29": 0.22, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.13},
+                  "interests": ["sailing", "running", "music"], "crime_index": 1.20},
+    "Köln":      {"singles": 0.48, "ages": {"20-29": 0.23, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.12},
+                  "interests": ["football", "music", "travel"], "crime_index": 1.15},
+}
+
 
 def _region_customers(profile: dict) -> tuple[str, list[dict]]:
     """Feinste Region mit mindestens 10 Kunden: PLZ-Gebiet (erste 2 Ziffern), sonst Bundesland."""
     rows = _read_csv("customers.csv")
     prefix = profile["postal_code"][:2]
     area = [r for r in rows if r["postal_code"][:2] == prefix]
-    if len(area) >= 10:
+    if len(area) >= MIN_SAMPLE:
         cities = sorted({r["residence_city"] for r in area})
         label = f"PLZ-Gebiet {prefix} ({', '.join(cities[:3])}{' …' if len(cities) > 3 else ''})"
         return label, area
@@ -239,7 +264,11 @@ def _region_customers(profile: dict) -> tuple[str, list[dict]]:
 
 
 def region_insights(profile: dict) -> dict:
-    """Aussagen über die Region des Kunden: Sicherheit, Singles, Altersgruppe, Interessen, Naturgefahr."""
+    """Aussagen über die Region des Kunden: Sicherheit, Singles, Altersgruppe, Interessen, Naturgefahr.
+
+    Bei weniger als MIN_SAMPLE echten Kundenprofilen in der Umgebung wird das Demo-Regionsprofil
+    der Stadt verwendet (falls vorhanden) und in der Beschriftung ausgewiesen.
+    """
     label, area = _region_customers(profile)
     everyone = _read_csv("customers.csv")
     n, n_all = len(area), len(everyone)
@@ -248,16 +277,26 @@ def region_insights(profile: dict) -> dict:
         return sum(1 for r in rows if pred(r)) / max(len(rows), 1)
 
     my_age = profile.get("age_group") or age_group_for(profile["birth_date"])
-    singles = share(area, lambda r: r["relationship_status"] in LOOKING)
     singles_all = share(everyone, lambda r: r["relationship_status"] in LOOKING)
-    same_age = share(area, lambda r: r["age_group"] == my_age)
     same_age_all = share(everyone, lambda r: r["age_group"] == my_age)
-    interests: dict[str, int] = {}
-    for r in area:
-        for i in r["interests"].split(";"):
-            if i:
-                interests[i] = interests.get(i, 0) + 1
-    top_interests = [INTERESTS.get(k, k) for k, _ in sorted(interests.items(), key=lambda kv: -kv[1])[:3]]
+
+    city = profile.get("city", "")
+    nearby_real = [r for r in everyone if r["residence_city"] == city]
+    demo = REGION_PROFILES.get(city) if len(nearby_real) < MIN_SAMPLE else None
+    if demo:
+        label, n = f"{city} (Demo-Regionsprofil)", len(nearby_real)
+        singles = demo["singles"]
+        same_age = demo["ages"].get(my_age, 0.1)
+        top_interests = [INTERESTS.get(k, k) for k in demo["interests"]]
+    else:
+        singles = share(area, lambda r: r["relationship_status"] in LOOKING)
+        same_age = share(area, lambda r: r["age_group"] == my_age)
+        interests: dict[str, int] = {}
+        for r in area:
+            for i in r["interests"].split(";"):
+                if i:
+                    interests[i] = interests.get(i, 0) + 1
+        top_interests = [INTERESTS.get(k, k) for k, _ in sorted(interests.items(), key=lambda kv: -kv[1])[:3]]
 
     # Sicherheit: Einbrüche/Diebstähle der letzten 12 Monate je 100 Kunden, Region vs. Deutschland
     incidents = load_incidents()
@@ -269,6 +308,8 @@ def region_insights(profile: dict) -> dict:
         n_state = sum(1 for r in everyone if r["federal_state"] == state) or 1
         crime_region = 100 * len(theft[theft["region"] == state]) / n_state
         crime_all = 100 * len(theft) / max(n_all, 1)
+        if demo:
+            crime_region = crime_all * demo["crime_index"]      # Demo-Index statt dünner Stichprobe
     disasters = load_disasters()
     nearby = 0
     if not disasters.empty:
