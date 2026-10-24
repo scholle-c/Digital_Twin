@@ -43,6 +43,24 @@ class DigitalTwin:
         dates = [event.date for event in self.customer.life_events if event.type == event_type]
         return (TODAY - max(dates)).days if dates else None
 
+    # ---- Schadenfälle (incidents.csv) ----
+    CLAIM_LABELS = {"burglary": "Einbruch", "attempted_burglary": "Einbruchsversuch", "theft": "Diebstahl",
+                    "bicycle_theft": "Fahrraddiebstahl", "vehicle_theft": "Kfz-Diebstahl", "fire": "Brand",
+                    "lightning_surge": "Überspannung", "water_damage": "Leitungswasser", "vandalism": "Vandalismus",
+                    "glass_breakage": "Glasbruch", "cyber_fraud": "Online-Betrug"}
+
+    def last_claim(self, status: str | None = None):
+        """Jüngster Schadenfall, optional nur mit diesem Status (z. B. 'rejected'); None wenn keiner."""
+        claims = [c for c in self.customer.incidents if status is None or c.claim_status == status]
+        return max(claims, key=lambda c: c.date) if claims else None
+
+    def claim_days(self, status: str | None = None) -> int | None:
+        claim = self.last_claim(status)
+        return (TODAY - claim.date).days if claim else None
+
+    def claim_label(self, claim) -> str:
+        return self.CLAIM_LABELS.get(claim.type, claim.type) if claim else ""
+
     def risks(self) -> dict[str, Risk]:
         output = {}
         for key, config in self.config["hazards"].items():
@@ -91,8 +109,8 @@ class DigitalTwin:
         Ohne ausreichende Evidenz ist das Ergebnis bewusst "keine Aktion".
         """
         # Priorität zuerst (ein gemeldetes Life Event mit Prio 1 schlägt eine allgemeine Prävention mit Prio 2),
-        # bei gleicher Priorität Prävention vor Lücke vor Cross-Sell.
-        order = {"prevention": 0, "gap": 1, "cross_sell": 2}
+        # bei gleicher Priorität Kundenbindung vor Prävention vor Lücke vor Cross-Sell.
+        order = {"retention": 0, "prevention": 1, "gap": 2, "cross_sell": 3}
         recs = sorted(self.recommendations(), key=lambda r: (r.priority, order.get(r.category, 9)))
         similar = self.similar_events()
         trends = self.regional_trends()
@@ -105,7 +123,13 @@ class DigitalTwin:
             )
         top = recs[0]
         signals: list[str] = []
-        confidence = {"prevention": 0.7, "gap": 0.75, "cross_sell": 0.6}[top.category]
+        confidence = {"retention": 0.85, "prevention": 0.7, "gap": 0.75, "cross_sell": 0.6}.get(top.category, 0.6)
+
+        # 0. Schadenfälle als Fakt
+        for claim in sorted(self.customer.incidents, key=lambda c: c.date, reverse=True)[:2]:
+            status = {"rejected": "abgelehnt", "in_review": "in Prüfung", "settled": "reguliert"}.get(claim.claim_status, claim.claim_status)
+            amount = f"{claim.damage_eur:,.0f}".replace(",", ".")
+            signals.append(f"Schadenfall {self.claim_label(claim)} am {claim.date:%d.%m.%Y}, {amount} €, {status}")
 
         # 1. Life Events als Fakt
         recent = [e for e in self.customer.life_events if (TODAY - e.date).days <= 365]
@@ -129,8 +153,9 @@ class DigitalTwin:
                 signals.append(f"Region {tr.region}: {metric} {tr.label}")
 
         timing = {1: "Diese Woche", 2: "Diesen Monat", 3: "Beim nächsten Kontakt"}.get(top.priority, "Beim nächsten Kontakt")
-        action_type = {"prevention": "risk", "gap": "talk", "cross_sell": "offer"}[top.category]
-        label = {"risk": "Risikogespräch", "talk": "Deckungslücke besprechen", "offer": "Angebot unterbreiten"}[action_type]
+        action_type = {"retention": "retention", "prevention": "risk", "gap": "talk", "cross_sell": "offer"}.get(top.category, "talk")
+        label = {"retention": "Kundenbindung sichern", "risk": "Risikogespräch", "talk": "Deckungslücke besprechen",
+                 "offer": "Angebot unterbreiten"}[action_type]
         return NextBestAction(
             action_type, label, top.product, top.category, timing, round(confidence, 2), top.reason,
             signals[:6], [f"{r.product}: {r.reason}" for r in recs[1:4]],
@@ -176,6 +201,9 @@ class DigitalTwin:
                 self._evaluate(self.config["hazards"][hazard])[1]
             ),
             # Neu: Ähnlichkeit und regionaler Trend
+            "last_claim": self.last_claim,
+            "claim_days": self.claim_days,
+            "claim_label": self.claim_label,
             "similar_p": lambda event: self.similar_events().get(event).p_12m if event in self.similar_events() else 0.0,
             "similar_ids": lambda event: [n["id"] for n in self.similar_events()[event].neighbors if n["had_event"]] if event in self.similar_events() else [],
             "trend": lambda metric: self.regional_trends().get(metric).pct_per_year if metric in self.regional_trends() else 0.0,

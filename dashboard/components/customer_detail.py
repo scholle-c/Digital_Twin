@@ -131,7 +131,7 @@ def render_recommendation(customer: Customer) -> None:
 # Handlungsempfehlung aus dem Digital Twin (Next Best Action)
 # ------------------------------------------------------------
 
-ACTION_ICONS = {"risk": "warning", "talk": "shield", "offer": "target", "none": "check"}
+ACTION_ICONS = {"retention": "heart", "risk": "warning", "talk": "shield", "offer": "target", "none": "check"}
 
 
 def render_next_action(customer: Customer) -> None:

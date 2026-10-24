@@ -106,6 +106,13 @@
   --cat: var(--c360-red); --cat-text: var(--c360-red); --cat-soft: var(--c360-red-soft);
   --cat-tint: var(--c360-red-tint); --cat-border: var(--c360-red-border);
 }
+.c360-cat-retention, .st-key-reco_box_retention, .st-key-actbox_retention {
+  --cat: #6B3FA0;
+  --cat-text: #5B338A;
+  --cat-soft: #EFE8F8;
+  --cat-tint: #F7F3FC;
+  --cat-border: #D9CBEE;
+}
 .c360-cat-gap, .st-key-reco_box_gap, .st-key-actbox_gap {
   --cat: var(--c360-orange); --cat-text: var(--c360-orange-text); --cat-soft: var(--c360-orange-soft);
   --cat-tint: var(--c360-orange-tint); --cat-border: var(--c360-orange-border);

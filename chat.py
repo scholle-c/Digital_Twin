@@ -52,6 +52,7 @@ def build_context(twin: DigitalTwin) -> dict:
         "house": asdict(twin.house),
         "iot": asdict(twin.iot),
         "life_events": [asdict(e) for e in twin.customer.life_events],
+        "claims": [asdict(c) for c in twin.customer.incidents],
         "risks_12m": {k: asdict(v) for k, v in twin.risks().items()},
         "predicted_events_12m": {k: asdict(v) for k, v in twin.predicted_events().items()},
         "recommendations": [asdict(r) for r in twin.recommendations()],

@@ -40,6 +40,11 @@ EVENT_LABELS = {
     "umzug": ("Umzug", "house"),
 }
 URGENCY = {1: "Diese Woche", 2: "Diesen Monat", 3: "Bei Gelegenheit"}
+CLAIM_LABELS = {"burglary": "Einbruch", "attempted_burglary": "Einbruchsversuch", "theft": "Diebstahl",
+                "bicycle_theft": "Fahrraddiebstahl", "vehicle_theft": "Kfz-Diebstahl", "fire": "Brand",
+                "lightning_surge": "Überspannung", "water_damage": "Leitungswasserschaden", "vandalism": "Vandalismus",
+                "glass_breakage": "Glasbruch", "cyber_fraud": "Online-Betrug"}
+CLAIM_STATUS = {"rejected": "abgelehnt", "in_review": "in Prüfung", "settled": "reguliert"}
 
 # Produkte aus config.toml -> Versicherungssparte im Dashboard.
 PRODUCT_COVERAGE = {
@@ -51,6 +56,8 @@ PRODUCT_COVERAGE = {
     "Hausrat-Summe bald prüfen": "hausrat",
     "Umzugs-Check": "hausrat",
     "Einbruchschutz ansprechen": "hausrat",
+    "Abgelehnten Schadenfall nachfassen": "hausrat",
+    "Fahrradbaustein": "hausrat",
 }
 PRODUCT_ICONS = {
     "Familienhaftpflicht": "heart",
@@ -61,6 +68,8 @@ PRODUCT_ICONS = {
     "Hausrat-Summe bald prüfen": "house",
     "Umzugs-Check": "house",
     "Einbruchschutz ansprechen": "shield",
+    "Abgelehnten Schadenfall nachfassen": "heart",
+    "Fahrradbaustein": "bike",
 }
 # Sparte: (Bezeichnung, Symbol, Gefahren aus config.toml, Life Events aus config.toml)
 COVERAGES = {
@@ -70,7 +79,7 @@ COVERAGES = {
     "kfz": ("Kfz", "target", [], ["auto", "ebike"]),
 }
 HAZARD_ICONS = {"feuer": "warning", "hochwasser": "waves", "leitungswasser": "building"}
-SOURCES = ["Kundendaten", "Gebäudedaten", "Life Events"]
+SOURCES = ["Kundendaten", "Gebäudedaten", "Life Events", "Schadenhistorie"]
 
 
 def _signals(names, results, icons) -> list[Signal]:
@@ -90,7 +99,7 @@ def _build_coverages(twin: DigitalTwin, recommendations, risks, events) -> list[
     coverages = []
     for key, (label, coverage_icon, hazards, life_events) in COVERAGES.items():
         recs = [r for r in recommendations if PRODUCT_COVERAGE.get(r.product) == key]
-        if twin.has(key):
+        if twin.has(key) or any(c.startswith(key + "_") for c in twin.person.contracts):
             status = "protected"
         elif recs:
             status = "check"
@@ -155,13 +164,25 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
             is_new=(TODAY - event.date).days < 90,
         )
         for event in sorted(twin.customer.life_events, key=lambda e: e.date, reverse=True)
+    ] + [
+        Event(
+            claim.date.strftime("%d.%m.%Y"),
+            f"Schadenfall {CLAIM_LABELS.get(claim.type, claim.type)}, {f'{claim.damage_eur:,.0f}'.replace(',', '.')} €, {CLAIM_STATUS.get(claim.claim_status, claim.claim_status)}",
+            "alert" if claim.claim_status == "rejected" else "file",
+            is_new=(TODAY - claim.date).days < 120,
+        )
+        for claim in sorted(twin.customer.incidents, key=lambda c: c.date, reverse=True)
     ]
+    timeline.sort(key=lambda e: e.when[6:] + e.when[3:5] + e.when[:2], reverse=True)
+    last_claim = max(twin.customer.incidents, key=lambda c: c.date, default=None)
     explanation = [
         f"Kundendaten: Altersgruppe {person.age_group}, Beruf {person.occupation}, "
         f"finanzielle Situation {FINANCES.get(person.financial_situation, person.financial_situation)}, "
         f"Kunde seit {person.customer_since:%d.%m.%Y}.",
         f"Gebäudedaten: {housing}, Baujahr {house.year}, Risikozone {house.riskzone}, "
         f"{'mit' if house.basement else 'ohne'} Keller, {house.floors} Etagen.",
+        *(f"Schadenhistorie: {CLAIM_LABELS.get(c.type, c.type)} am {c.date:%d.%m.%Y}, {f'{c.damage_eur:,.0f}'.replace(',', '.')} €, {CLAIM_STATUS.get(c.claim_status, c.claim_status)}."
+          for c in twin.customer.incidents),
         *(f"{r.product}: {r.reason}." for r in recommendations),
     ]
     max_risk = max((r.p_12m for r in risks.values()), default=0)
@@ -182,9 +203,10 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
         reason=top.reason if top else "Keine Auffälligkeiten erkannt",
         headline=f"{URGENCY.get(rec_priority, URGENCY[3])} kontaktieren" if top else "Kein akuter Handlungsbedarf",
         situation=[r.reason + "." for r in recommendations[:2]] or ["Keine Auffälligkeiten erkannt."],
-        recommendation=f"{top.product} besprechen." if top else "Beim nächsten Kontakt Situation bestätigen.",
+        recommendation=(f"{top.product}." if top.product.endswith(("nachfassen", "prüfen", "ansprechen", "anbieten"))
+                        else f"{top.product} besprechen.") if top else "Beim nächsten Kontakt Situation bestätigen.",
         benefit=CATEGORIES[category].description,
-        last_contact=NOT_SPECIFIED,
+        last_contact=f"Schadenmeldung {last_claim.date:%d.%m.%Y}" if last_claim else NOT_SPECIFIED,
         sources=SOURCES,
         explanation=explanation,
         coverages=_build_coverages(twin, recommendations, risks, events),
@@ -202,7 +224,9 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
     )
     # Reihenfolge: Empfehlungspriorität, dann frische Signale (Life Event in den letzten 30 Tagen),
     # dann Kategorie (Prävention vor Lücke vor Cross-Sell), dann höchstes Risiko.
-    fresh_event = any((TODAY - e.date).days <= 30 for e in twin.customer.life_events)
+    fresh_event = any((TODAY - e.date).days <= 30 for e in twin.customer.life_events) or any(
+        c.claim_status == "rejected" and (TODAY - c.date).days <= 180 for c in twin.customer.incidents
+    )
     sort_key = (rec_priority, 0 if fresh_event else 1, CATEGORIES[category].order, -max_risk)
     return sort_key, customer
 

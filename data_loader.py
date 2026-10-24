@@ -2,7 +2,7 @@ import csv
 from datetime import date
 from pathlib import Path
 
-from models import Customer, House, IoT, LifeEvent, Person
+from models import Customer, House, Incident, IoT, LifeEvent, Person
 
 
 DATA_FOLDER = Path(__file__).parent / "generated_demodata"
@@ -11,6 +11,19 @@ DATA_FOLDER = Path(__file__).parent / "generated_demodata"
 def _read_rows(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8", newline="") as file:
         return list(csv.DictReader(file))
+
+
+def default_contracts(customer_id: str, occupation: str, birth: date | None, life_events: list) -> list[str]:
+    """Demo-Vertragsbestand ohne Vertrags-CSV (gleiche Logik wie im Kundenportal):
+    jung (Studium, Ausbildung, unter 30): Hausrat + Haftpflicht Single, Kfz erst 30 Tage nach Autokauf;
+    alle anderen: Hausrat, Haftpflicht Single, Kfz, Krankenzusatz, Rente."""
+    from models import TODAY
+    age = (TODAY - birth).days // 365 if birth else 40
+    young = occupation in ("student", "apprentice") or age < 30
+    has_car = any(e.type == "auto" and (TODAY - e.date).days > 30 for e in life_events)
+    if young:
+        return ["hausrat", "haftpflicht_single"] + (["kfz"] if has_car else [])
+    return ["hausrat", "haftpflicht_single", "kfz", "kranken_zusatz", "rente"]
 
 
 def _default_smoke_detector(customer_id: str) -> bool:
@@ -42,7 +55,15 @@ def load_customer(
         for row in _read_rows(folder / "life_events.csv")
         if row["customer_id"] == customer_id
     ]
+    incidents_path = folder / "incidents.csv"
+    incidents = [
+        Incident(row["incident_type"], date.fromisoformat(row["incident_date"]), float(row["damage_eur"] or 0),
+                 row.get("claim_status", ""), row.get("city", ""))
+        for row in (_read_rows(incidents_path) if incidents_path.exists() else [])
+        if row.get("customer_id") == customer_id
+    ]
 
+    birth = _date_or_none(customer.get("birth_date"))
     return Customer(
         person=Person(
             customer["customer_id"],
@@ -50,8 +71,9 @@ def load_customer(
             customer["occupation"],
             customer["financial_situation"],
             date.fromisoformat(customer["customer_since"]),
-            contracts if contracts is not None else [],
-            birth_date=_date_or_none(customer.get("birth_date")),
+            contracts if contracts is not None
+            else default_contracts(customer_id, customer["occupation"], birth, life_events),
+            birth_date=birth,
             gender=customer.get("gender", ""),
             relationship_status=customer.get("relationship_status", ""),
             city=customer.get("residence_city", ""),
@@ -69,6 +91,7 @@ def load_customer(
         # Demo-Annahme ohne Sensor-CSV: 80 % der Haushalte haben einen Rauchmelder (deterministisch je ID)
         iot=iot if iot is not None else IoT(smoke_detector=_default_smoke_detector(customer_id)),
         life_events=life_events,
+        incidents=incidents,
     )
 
 
