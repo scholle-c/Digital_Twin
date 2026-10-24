@@ -17,7 +17,7 @@ from core.state import navigate, open_notification
 from ui.components import badge, coverage_ring, esc, euro, icon, page_header, render_html, stat_tile
 from ui.layout import card_head, policy_badge
 
-CATEGORY_TONES = {"prevention": "danger", "gap": "warn", "cross_sell": "ok"}
+CATEGORY_TONES = {"prevention": "danger", "gap": "warn", "retention": "warn", "cross_sell": "ok"}
 
 
 # Öffnet die Angebotsseite direkt mit aufgeklapptem Angebot.

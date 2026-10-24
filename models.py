@@ -55,11 +55,22 @@ class LifeEvent:
 
 
 @dataclass
+class Incident:
+    """Schadenfall / Vorfall des Kunden aus incidents.csv."""
+    type: str                       # burglary / bicycle_theft / fire / water_damage ...
+    date: date
+    damage_eur: float
+    claim_status: str               # settled / in_review / rejected / ""
+    city: str = ""
+
+
+@dataclass
 class Customer:
     person: Person
     house: House
     iot: IoT
     life_events: list[LifeEvent]
+    incidents: list[Incident] = field(default_factory=list)
 
 
 @dataclass

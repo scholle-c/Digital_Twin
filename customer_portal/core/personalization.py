@@ -13,8 +13,8 @@ from core.data import Policy
 from core.twin import TwinResult, run_twin
 
 # Reihenfolge der Kategorien: Fürsorge (Prävention) vor Lücke vor Ergänzung.
-CATEGORY_ORDER = {"prevention": 0, "gap": 1, "cross_sell": 2}
-CATEGORY_LABELS = {"prevention": "Prävention", "gap": "Lücke schließen", "cross_sell": "Ergänzung"}
+CATEGORY_ORDER = {"prevention": 0, "gap": 1, "retention": -1, "cross_sell": 2}
+CATEGORY_LABELS = {"prevention": "Prävention", "gap": "Lücke schließen", "retention": "Kundenbindung", "cross_sell": "Ergänzung"}
 
 
 # ------------------------------------------------------------

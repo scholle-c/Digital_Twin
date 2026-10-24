@@ -12,6 +12,9 @@
 #   risk("feuer")             -> p_12m der Gefahr
 #   event_p("umzug")          -> p_12m des Life Events
 #   drivers("feuer")          -> Liste der Treiber-Namen
+#   last_claim("rejected")    -> jüngster Schadenfall mit Status (rejected/in_review/settled) oder None
+#   claim_days("rejected")    -> Tage seit diesem Schadenfall oder None
+#   claim_label(claim)        -> deutscher Name des Schadentyps
 #   similar_p("kind")         -> p_12m aus ähnlichen Kunden (similarity.py)
 #   similar_ids("kind")       -> IDs der ähnlichen Kunden, die das Event hatten
 #   trend("einbrueche")       -> regionaler Trend in %/Jahr (forecast.py), Region = Bundesland
@@ -88,7 +91,21 @@ factors = [
 ]
 
 # ---------- EMPFEHLUNGEN: Regel -> Produkt + Text ----------
-# category: prevention (Schaden verhindern) > gap (Deckungslücke) > cross_sell
+# category: retention (Kundenbindung) > prevention (Schaden verhindern) > gap (Deckungslücke) > cross_sell
+[[recommendations]]
+product  = "Abgelehnten Schadenfall nachfassen"
+category = "retention"
+priority = 1
+when = "claim_days('rejected') is not None and claim_days('rejected') < 180"
+text = "{claim_label(last_claim('rejected'))} am {last_claim('rejected').date:%d.%m.%Y} über {last_claim('rejected').damage_eur:.0f} € abgelehnt: Entscheidung erklären, Alternative anbieten, Kündigungsrisiko senken"
+
+[[recommendations]]
+product  = "Fahrradbaustein"
+category = "cross_sell"
+priority = 1
+when = "last_claim('rejected') is not None and last_claim('rejected').type == 'bicycle_theft' and not has('fahrrad_baustein')"
+text = "Fahrraddiebstahl war nicht gedeckt: Fahrradbaustein zur Hausrat schließt die Lücke für das nächste Rad"
+
 [[recommendations]]
 product  = "Familienhaftpflicht"
 category = "cross_sell"

@@ -12,7 +12,7 @@ from core.personalization import CATEGORY_LABELS
 from core.state import dismiss_offer, navigate, request_offer, restore_offers, toggle_offer
 from ui.components import badge, empty_state, esc, icon, page_header, render_html
 
-CATEGORY_TONES = {"prevention": "danger", "gap": "warn", "cross_sell": "ok"}
+CATEGORY_TONES = {"prevention": "danger", "gap": "warn", "retention": "warn", "cross_sell": "ok"}
 FILTERS = {"Alle": None, "Prävention": "prevention", "Lücken schließen": "gap", "Ergänzungen": "cross_sell"}
 
 
