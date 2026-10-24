@@ -32,7 +32,8 @@ def customer_facts(profile: dict, answers: dict) -> dict:
         "owns_car": answers.get("owns_car", "Ja") == "Ja",
         "owner": answers.get("ownership") == "Eigentum",
         "house": answers.get("housing_type") in ("Reihen-/Doppelhaus", "Freistehendes Haus"),
-        "smoke_detector": answers.get("smoke_detector") == "Ja, in allen Räumen",
+        # None = nicht beantwortet, dann gilt die Annahme aus den Kundendaten (data_loader)
+        "smoke_detector": (answers.get("smoke_detector") == "Ja, in allen Räumen") if "smoke_detector" in answers else None,
         "priorities": set(answers.get("priorities", [])),
         "family_changes": set(answers.get("family_change_types", [])),
         "bikes": set(answers.get("bikes", [])),

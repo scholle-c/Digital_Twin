@@ -12,7 +12,9 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from core.data import TODAY, home_coords, load_age_group_claims, load_disasters, load_incidents, region_insights
+from core.data import (TODAY, home_coords, load_age_group_claims, load_disasters, load_incidents, place_coords,
+                       place_options, place_profile, region_insights)
+from core.state import navigate
 from core.twin import load_forecast
 from geo_heatmap import render_heatmap
 from ui.components import badge, empty_state, esc, euro, icon, page_header, render_html
@@ -94,7 +96,8 @@ def _my_region(profile: dict) -> None:
     source = (f"Demo-Regionsprofil für {esc(r['label'].split(' (')[0])} plus {r['n']} anonymisierte Kundenprofile und regionale Vorfalldaten"
               if "Demo-Regionsprofil" in r["label"]
               else f"Abgeleitet aus {r['n']} anonymisierten Kundenprofilen in Ihrer Umgebung und den regionalen Vorfalldaten")
-    render_html(f'<h3 class="dt-h3">Meine Region: {esc(r["label"])}</h3><p class="dt-tiny">{source}.</p>')
+    heading = r["label"].replace(" (Demo-Regionsprofil)", "")
+    render_html(f'<h3 class="dt-h3">Meine Region: {esc(heading)}</h3><p class="dt-tiny">{source}.</p>')
     cards = []
 
     # 1. Sicherheit
@@ -150,7 +153,61 @@ def _my_region(profile: dict) -> None:
                         f'<p style="margin:6px 0 2px">{esc(text)}</p>')
             if value is not None:
                 st.progress(float(max(0.0, min(value, 1.0))), text=caption)
+    _place_check(profile, r)
     st.divider()
+
+
+# Umzugs-Check: einen anderen Ort auswählen und mit dem Wohnort vergleichen.
+def _place_check(profile: dict, home: dict) -> None:
+    """Ortssuche mit Vergleich Wohnort vs. Zielort; Karte springt zum Ziel, Umzug kann direkt gemeldet werden."""
+    render_html('<h4 class="dt-h4" style="margin-top:14px">Anderen Ort prüfen</h4>'
+                '<p class="dt-tiny">Sie überlegen umzuziehen? Wählen Sie einen Ort und vergleichen Sie Sicherheit und Umfeld mit Ihrem Wohnort.</p>')
+    options = [c for c in place_options() if c != profile["city"]]
+    target = st.selectbox("Ort suchen", options, index=None, placeholder="Stadt eingeben, z. B. München", key="trf_place")
+    st.session_state["trf_focus"] = None
+    if not target:
+        return
+    there_profile = place_profile(target, profile)
+    there = region_insights(there_profile)
+    st.session_state["trf_focus"] = place_coords(target, there_profile)
+
+    def pct(v):
+        return f"{v:.0%}"
+
+    crime_home = home["crime_region"] / max(home["crime_all"], 0.01)
+    crime_there = there["crime_region"] / max(there["crime_all"], 0.01)
+    rows = [
+        ("Einbrüche vs. Bundesschnitt", f"{crime_home - 1:+.0%}", f"{crime_there - 1:+.0%}", "ok" if crime_there <= crime_home else "warn"),
+        ("Singles", pct(home["singles"]), pct(there["singles"]), "info"),
+        (f"In Ihrem Alter ({home['my_age']})", pct(home["same_age"]), pct(there["same_age"]), "info"),
+        ("Naturereignisse aktiv/erwartet", str(home["nearby_disasters"]), str(there["nearby_disasters"]),
+         "ok" if there["nearby_disasters"] <= home["nearby_disasters"] else "warn"),
+        ("Typische Interessen", ", ".join(home["top_interests"]), ", ".join(there["top_interests"]), "info"),
+    ]
+    table = "".join(f"<tr><td>{esc(k)}</td><td>{esc(a)}</td><td><b>{esc(b)}</b></td></tr>" for k, a, b, _ in rows)
+    render_html(f'<table class="dt-table" style="width:100%"><thead><tr><th></th><th>{esc(profile["city"])} (heute)</th>'
+                f'<th>{esc(target)}</th></tr></thead><tbody>{table}</tbody></table>')
+
+    verdict = []
+    verdict.append("sicherer als Ihr Wohnort" if crime_there < crime_home * 0.9 else
+                   "weniger sicher als Ihr Wohnort" if crime_there > crime_home * 1.1 else "ähnlich sicher wie Ihr Wohnort")
+    if there["singles"] >= 0.45:
+        verdict.append("viele Singles")
+    if there["same_age"] >= 0.3:
+        verdict.append("viele Menschen in Ihrem Alter")
+    if there["nearby_disasters"] > home["nearby_disasters"]:
+        verdict.append("mehr Unwetterwarnungen, Elementarschutz prüfen")
+    render_html(f'<div class="dt-callout">{icon("insights", "ms-sm")}<span><b>{esc(target)}:</b> {esc(", ".join(verdict))}. '
+                f'Quelle: {"Demo-Regionsprofil" if "Demo" in there["label"] else str(there["n"]) + " Kundenprofile"} und regionale Vorfalldaten.</span></div>')
+    st.button(f"Umzug nach {target} melden", key="trf_move", icon=":material/moving:", type="primary",
+              on_click=_prefill_move, args=(there_profile,))
+
+
+def _prefill_move(there_profile: dict) -> None:
+    """Öffnet das Ereignisformular im Profil mit dem gewählten Ort vorausgefüllt."""
+    st.session_state.update(event_form_open=True, ev_type="umzug", ev_postal=there_profile["postal_code"],
+                            ev_city=there_profile["city"], ev_state=there_profile.get("federal_state", ""))
+    navigate("profile")
 
 
 # Vier Kennzahlen mit Tooltips zur Erklärung.
@@ -174,8 +231,10 @@ def _heatmap(data: pd.DataFrame, nature: pd.DataFrame, region: str) -> None:
     """Zeigt eine interaktive Karte mit Heatmap und Markern."""
     render_html('<h3 class="dt-h3">Regionale Risiko-Heatmap</h3>')
     points = data.assign(weight=data["severity_level"].astype(float), tip=data["label"] + " · " + data["city"])
-    center = (data["latitude"].mean(), data["longitude"].mean()) if region != "Deutschland gesamt" else (51.1, 10.4)
-    render_heatmap(points, nature, home=_home(), center=center, zoom=6 if region != "Deutschland gesamt" else 4.8, height=380)
+    focus = st.session_state.get("trf_focus")
+    center = focus or ((data["latitude"].mean(), data["longitude"].mean()) if region != "Deutschland gesamt" else (51.1, 10.4))
+    zoom = 8 if focus else 6 if region != "Deutschland gesamt" else 4.8
+    render_heatmap(points, nature, home=_home(), center=center, zoom=zoom, height=380)
     render_html(
         '<div class="dt-legend"><span><i class="dt-sw dt-sw-heat"></i>Dichte der Vorfälle (gewichtet nach Schwere)</span>'
         '<span><i class="dt-sw dt-sw-home"></i>Ihr Wohnort</span>'

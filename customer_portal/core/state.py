@@ -82,7 +82,7 @@ def login(customer_id: str) -> None:
         st.session_state.notifications = []
     st.session_state.customer_id = customer_id
     st.session_state.profile = initial_profile(customer_id)
-    st.session_state.policies = initial_policies()
+    st.session_state.policies = initial_policies(st.session_state.profile)
     st.session_state.authenticated = True
     st.session_state.page = "home"
     if not st.session_state.notifications:

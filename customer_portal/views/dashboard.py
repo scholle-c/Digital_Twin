@@ -11,7 +11,7 @@ from datetime import datetime
 
 import streamlit as st
 
-from core.data import POLICY_STATUS, TODAY
+from core.data import POLICY_STATUS, TODAY, region_insights
 from core.personalization import CATEGORY_LABELS
 from core.state import navigate, open_notification
 from ui.components import badge, coverage_ring, esc, euro, icon, page_header, render_html, stat_tile
@@ -41,7 +41,8 @@ def render(ctx: dict) -> None:
     review = [p for p in policies if p.status == "review"]
     page_header(
         f"{_greeting()}, {profile['first_name']}!",
-        f"{len(review)} Verträge zur Prüfung · {len(offers)} persönliche Empfehlungen · Stand {TODAY:%d.%m.%Y}",
+        f"{len(review)} {'Vertrag' if len(review) == 1 else 'Verträge'} zur Prüfung · "
+        f"{len(offers)} persönliche {'Empfehlung' if len(offers) == 1 else 'Empfehlungen'} · Stand {TODAY:%d.%m.%Y}",
     )
 
     left, right = st.columns([1, 1.7], gap="medium")
@@ -103,6 +104,12 @@ def _status_card(ctx: dict, review: list) -> None:
                 f"<small>3 Minuten – macht Ihre Empfehlungen genauer</small></div></div>"
             )
             st.button("Starten", key="stepbtn_questionnaire", on_click=navigate, args=("questionnaire",))
+    with st.container(key="step_move"):
+        render_html(
+            f'<div class="dt-step">{icon("moving")}<div><b>Umzug geplant? Orte vergleichen</b>'
+            f"<small>Sicherheit, Nachbarschaft und Risiken für Ihren Wunschort prüfen</small></div></div>"
+        )
+        st.button("Orte prüfen", key="stepbtn_move", on_click=navigate, args=("trends",))
     if not steps:
         render_html('<p class="dt-muted">Aktuell gibt es keine offenen Empfehlungen. Gut abgesichert!</p>')
     for offer in steps:
@@ -168,6 +175,23 @@ def _risk_card(ctx: dict) -> None:
     st.button("Zu Trends & Analysen", key="dash_trends", icon=":material/arrow_forward:", on_click=navigate, args=("trends",))
 
 
+# Kurzer Teaser zur Region für die Schnellzugriff-Kachel, z. B. „Sichere Gegend · 52 % Singles“.
+def _region_teaser(profile: dict) -> str:
+    """Fasst die wichtigsten Regionsaussagen in einer Zeile zusammen."""
+    try:
+        r = region_insights(profile)
+    except Exception:  # noqa: BLE001
+        return "Risiken in Ihrer Region"
+    parts = []
+    if r["crime_all"] and r["crime_region"] <= r["crime_all"] * 0.85:
+        parts.append("Sichere Gegend")
+    if r["singles"] >= 0.45:
+        parts.append(f"{r['singles']:.0%} Singles")
+    if r["same_age"] >= 0.3:
+        parts.append("viele in Ihrem Alter")
+    return " · ".join(parts) or "Risiken und Umfeld in Ihrer Region"
+
+
 # Schnellzugriffe als große Kacheln.
 def _shortcuts(ctx: dict) -> None:
     """Zeigt Schnellzugriffe zu Profil, Fragebogen, Angeboten und Analysen."""
@@ -175,8 +199,8 @@ def _shortcuts(ctx: dict) -> None:
     items = [
         ("profile", "Profil verwalten", "person", "Kontakt, Familie, Präferenzen"),
         ("questionnaire", "Fragebogen", "assignment", "Erledigt ✓" if st.session_state.q_submitted else "Noch offen"),
-        ("offers", "Angebote", "local_offer", f"{len(ctx['offers'])} Empfehlungen"),
-        ("trends", "Trends & Analysen", "insights", "Risiken in Ihrer Region"),
+        ("offers", "Angebote", "local_offer", f"{len(ctx['offers'])} {'Empfehlung' if len(ctx['offers']) == 1 else 'Empfehlungen'}"),
+        ("trends", "Meine Region", "insights", _region_teaser(ctx["profile"])),
     ]
     columns = st.columns(len(items), gap="small")
     for column, (page, title, sym, hint) in zip(columns, items):

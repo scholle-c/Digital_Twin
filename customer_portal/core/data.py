@@ -72,6 +72,12 @@ RELATIONSHIP_CODES = {v: k for k, v in RELATIONSHIP.items()}
 INTEREST_CODES = {v: k for k, v in INTERESTS.items()}
 
 
+# Demo-Persona Anna: Kontaktdaten für die Vorführung (sonst Platzhalter).
+DEMO_PERSONAS = {
+    "C0021": {"street": "Bismarckstraße 12", "email": "anna.schneider@example.com", "phone": "+49 151 2345678",
+              "channels": ["App-Benachrichtigung", "E-Mail"], "contact_time": "Abends"},
+}
+
 # Spalten, die nur das Portal kennt (nicht in customers.csv). Liegen in portal_profiles.csv.
 PORTAL_FIELDS = ["first_name", "last_name", "street", "email", "phone", "children", "household_size",
                  "channels", "contact_time", "newsletter"]
@@ -122,7 +128,9 @@ def home_coords(postal_code: str, federal_state: str = "") -> tuple[float, float
 def initial_profile(customer_id: str) -> dict:
     """Gibt das Startprofil eines Kunden als Dict zurück."""
     row = customer_row(customer_id)
-    extra = _portal_row(customer_id)
+    extra = {**DEMO_PERSONAS.get(customer_id, {}), **_portal_row(customer_id)}
+    if isinstance(extra.get("channels"), list):
+        extra["channels"] = ";".join(extra["channels"])
     gender = row.get("gender", "diverse")
     first, last = display_name(customer_id, gender)
     children = sum(1 for e in _read_csv("life_events.csv") if e["customer_id"] == customer_id and e["event_type"] == "kind")
@@ -229,25 +237,51 @@ LOOKING = {"single", "divorced", "widowed"}
 # Einbruchsindex relativ zum Bundesdurchschnitt: 0.8 = 20 % darunter).
 MIN_SAMPLE = 10
 REGION_PROFILES = {
-    "Erlangen":  {"singles": 0.52, "ages": {"20-29": 0.41, "30-39": 0.27, "40-49": 0.14, "50-59": 0.10, "60-69": 0.08},
+    "Erlangen":  {"state": "Bayern", "postal": "91054", "lat": 49.60, "lon": 11.00, "singles": 0.52, "ages": {"20-29": 0.41, "30-39": 0.27, "40-49": 0.14, "50-59": 0.10, "60-69": 0.08},
                   "interests": ["music", "cycling", "fitness"], "crime_index": 0.78},
-    "Nürnberg":  {"singles": 0.44, "ages": {"20-29": 0.26, "30-39": 0.28, "40-49": 0.20, "50-59": 0.14, "60-69": 0.12},
+    "Nürnberg":  {"state": "Bayern", "postal": "90402", "lat": 49.45, "lon": 11.08, "singles": 0.44, "ages": {"20-29": 0.26, "30-39": 0.28, "40-49": 0.20, "50-59": 0.14, "60-69": 0.12},
                   "interests": ["football", "music", "travel"], "crime_index": 1.12},
-    "Fürth":     {"singles": 0.38, "ages": {"20-29": 0.22, "30-39": 0.27, "40-49": 0.22, "50-59": 0.16, "60-69": 0.13},
+    "Fürth":     {"state": "Bayern", "postal": "90762", "lat": 49.48, "lon": 10.99, "singles": 0.38, "ages": {"20-29": 0.22, "30-39": 0.27, "40-49": 0.22, "50-59": 0.16, "60-69": 0.13},
                   "interests": ["football", "gardening", "cooking"], "crime_index": 0.95},
-    "München":   {"singles": 0.47, "ages": {"20-29": 0.24, "30-39": 0.31, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
+    "München":   {"state": "Bayern", "postal": "80331", "lat": 48.14, "lon": 11.58, "singles": 0.47, "ages": {"20-29": 0.24, "30-39": 0.31, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
                   "interests": ["travel", "fitness", "skiing"], "crime_index": 1.05},
-    "Bayreuth":  {"singles": 0.40, "ages": {"20-29": 0.30, "30-39": 0.22, "40-49": 0.18, "50-59": 0.15, "60-69": 0.15},
+    "Bayreuth":  {"state": "Bayern", "postal": "95444", "lat": 49.95, "lon": 11.58, "singles": 0.40, "ages": {"20-29": 0.30, "30-39": 0.22, "40-49": 0.18, "50-59": 0.15, "60-69": 0.15},
                   "interests": ["hiking", "music", "football"], "crime_index": 0.72},
-    "Augsburg":  {"singles": 0.36, "ages": {"20-29": 0.21, "30-39": 0.26, "40-49": 0.22, "50-59": 0.17, "60-69": 0.14},
+    "Augsburg":  {"state": "Bayern", "postal": "86150", "lat": 48.37, "lon": 10.90, "singles": 0.36, "ages": {"20-29": 0.21, "30-39": 0.26, "40-49": 0.22, "50-59": 0.17, "60-69": 0.14},
                   "interests": ["cycling", "cooking", "gardening"], "crime_index": 0.90},
-    "Berlin":    {"singles": 0.55, "ages": {"20-29": 0.25, "30-39": 0.30, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
+    "Berlin":    {"state": "Berlin", "postal": "10115", "lat": 52.52, "lon": 13.40, "singles": 0.55, "ages": {"20-29": 0.25, "30-39": 0.30, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
                   "interests": ["art", "music", "travel"], "crime_index": 1.35},
-    "Hamburg":   {"singles": 0.49, "ages": {"20-29": 0.22, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.13},
+    "Hamburg":   {"state": "Hamburg", "postal": "20095", "lat": 53.55, "lon": 10.00, "singles": 0.49, "ages": {"20-29": 0.22, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.13},
                   "interests": ["sailing", "running", "music"], "crime_index": 1.20},
-    "Köln":      {"singles": 0.48, "ages": {"20-29": 0.23, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.12},
+    "Köln":      {"state": "Nordrhein-Westfalen", "postal": "50667", "lat": 50.94, "lon": 6.96, "singles": 0.48, "ages": {"20-29": 0.23, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.12},
                   "interests": ["football", "music", "travel"], "crime_index": 1.15},
 }
+
+
+def place_options() -> list[str]:
+    """Orte, die geprüft werden können: Demo-Profile plus alle Wohnorte aus customers.csv."""
+    cities = set(REGION_PROFILES) | {r["residence_city"] for r in _read_csv("customers.csv") if r["residence_city"]}
+    return sorted(cities)
+
+
+def place_profile(city: str, base_profile: dict) -> dict:
+    """Hypothetisches Profil des Kunden an einem anderen Ort (für den Umzugs-Check)."""
+    demo = REGION_PROFILES.get(city)
+    row = next((r for r in _read_csv("customers.csv") if r["residence_city"] == city), {})
+    return {
+        **base_profile,
+        "city": city,
+        "postal_code": demo["postal"] if demo else row.get("postal_code", base_profile["postal_code"]),
+        "federal_state": demo["state"] if demo else row.get("federal_state", base_profile.get("federal_state", "")),
+    }
+
+
+def place_coords(city: str, profile: dict) -> tuple[float, float]:
+    """Koordinaten eines Ortes: Demo-Profil, sonst PLZ-/Bundesland-Näherung."""
+    demo = REGION_PROFILES.get(city)
+    if demo:
+        return demo["lat"], demo["lon"]
+    return home_coords(profile["postal_code"], profile.get("federal_state", ""))
 
 
 def _region_customers(profile: dict) -> tuple[str, list[dict]]:
@@ -359,8 +393,36 @@ class Policy:
 
 
 # Ausgangsbestand. Bedingungen und Beiträge sind Beispielwerte, keine echten Tarife.
-def initial_policies() -> list[Policy]:
-    """Gibt die fiktiven Verträge des Demokunden zurück."""
+def initial_policies(profile: dict | None = None) -> list[Policy]:
+    """Fiktive Verträge, passend zur Lebenslage: junge Kundinnen und Kunden (Studium, Ausbildung, unter 30)
+    haben nur Hausrat und Haftpflicht, Kfz nur nach gemeldetem Autokauf. Alle anderen den vollen Bestand."""
+    policies = _all_policies()
+    if not profile:
+        return policies
+    young = profile.get("occupation") in ("Student/in", "Auszubildende/r") or (TODAY - profile["birth_date"]).days < 30 * 365
+    if not young:
+        return policies
+    has_car = any(e["type"] == "auto" for e in life_events_of(profile["customer_id"]))
+    keep = {"hausrat", "haftpflicht"} | ({"kfz"} if has_car else set())
+    policies = [p for p in policies if p.id in keep]
+    for p in policies:
+        if p.id == "hausrat":
+            p.policy_number, p.premium_month = "HR-5520-0117", 6.90
+            p.start, p.renewal = date(2025, 9, 1), date(2026, 12, 1)
+            p.coverage = {"Versicherungssumme": "25.000 €", "Selbstbeteiligung": "150 €", "Fahrraddiebstahl": "bis 1.500 €",
+                          "Elementarschäden": "nicht eingeschlossen"}
+            p.documents = ["Versicherungsschein 2025"]
+        elif p.id == "haftpflicht":
+            p.start, p.renewal, p.status, p.review_note = date(2025, 9, 1), date(2027, 9, 1), "active", ""
+        elif p.id == "kfz":
+            p.coverage = {"Fahrzeug": "Kleinwagen, gebraucht", "Umfang": "Haftpflicht + Teilkasko", "SF-Klasse": "SF 1",
+                          "Jährliche Fahrleistung": "8.000 km"}
+            p.premium_month = 48.50
+    return policies
+
+
+def _all_policies() -> list[Policy]:
+    """Vollständiger fiktiver Vertragsbestand."""
     return [
         Policy(
             "hausrat", "Hausratversicherung", "Wohnen", "chair", "review", "HR-4471-2209",
@@ -517,7 +579,7 @@ def initial_notifications(postal_code: str, coords: tuple[float, float]) -> list
         if not recent.empty:
             notes.append({
                 "id": "nbh_incidents", "category": "warning", "date": recent["incident_date"].max().date(),
-                "title": f"{len(recent)} Vorfall/Vorfälle in Ihrer Nachbarschaft",
+                "title": f"{len(recent)} {'Vorfall' if len(recent) == 1 else 'Vorfälle'} in Ihrer Nachbarschaft",
                 "text": "In Ihrem PLZ-Gebiet wurde in den letzten 90 Tagen eingebrochen. Tipps zum Einbruchschutz finden Sie unter Trends.",
                 "page": "trends", "read": False,
             })
