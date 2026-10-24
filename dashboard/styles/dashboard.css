@@ -466,6 +466,55 @@ header[data-testid="stHeader"],
 .st-key-detail_panel h3 { font-size: 1.1rem; font-weight: 700; color: var(--c360-navy); letter-spacing: 0; }
 .st-key-detail_panel [data-testid="stCaptionContainer"] { font-size: 0.8rem; }
 
+.c360-twin-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 0 12px; }
+.c360-twin-eyebrow { font-size: 0.72rem; font-weight: 600; color: var(--c360-muted); }
+.c360-twin-heading h3 { margin: 3px 0 0; padding: 0; }
+.c360-twin-count { display: inline-flex; align-items: center; gap: 7px; font-size: 0.78rem; color: var(--c360-primary-strong); }
+.c360-twin-count .c360-icon { width: 18px; height: 18px; }
+.st-key-twin_kpis { padding: 12px 0 18px; border-top: 1px solid var(--c360-border); border-bottom: 1px solid var(--c360-border); }
+.st-key-twin_kpis [data-testid="stMetric"] { background: transparent; border: 0; border-radius: 0; padding: 0 12px; min-height: 106px; }
+.st-key-twin_kpis [data-testid="stMetricValue"] > div { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.st-key-twin_kpis [data-testid="stMetricDelta"] > div { white-space: normal; }
+.st-key-twin_kpis [data-testid="stColumn"] + [data-testid="stColumn"] { border-left: 1px solid var(--c360-border); }
+.st-key-twin_sections [data-baseweb="tab-list"] { gap: 22px; background: transparent; }
+.st-key-twin_sections [data-baseweb="tab"] { color: var(--c360-muted); padding: 10px 0; font-weight: 600; }
+.st-key-twin_sections [data-baseweb="tab"][aria-selected="true"] { color: var(--c360-primary-strong); }
+.st-key-twin_sections [data-baseweb="tab-highlight"] { background: var(--c360-primary-strong); }
+.st-key-twin_sections [data-baseweb="tab-panel"] { padding-top: 18px; }
+.c360-twin-section-title { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.c360-twin-section-title h4 { font-size: 1rem; font-weight: 700; color: var(--c360-navy); margin: 0; padding: 0; }
+.c360-twin-section-title > span { font-size: 0.75rem; color: var(--c360-muted); }
+[class*="st-key-twin_neighbor_"] { position: relative; gap: 0; height: 100%; }
+.c360-twin-neighbor { background: var(--c360-card); border: 1px solid var(--c360-border); border-radius: 8px; padding: 16px 18px 0; min-height: 218px; height: 100%; }
+.c360-twin-neighbor.is-closest { border-color: #7FA6D6; background: #F4F8FD; }
+.c360-twin-neighbor-top { display: flex; align-items: center; gap: 10px; min-height: 50px; }
+.c360-twin-initials { flex: 0 0 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--c360-primary-soft); color: var(--c360-primary-strong); font-size: 0.8rem; font-weight: 700; }
+.c360-twin-person { flex: 1; min-width: 0; }
+.c360-twin-person strong { display: block; font-size: 0.95rem; line-height: 1.35; overflow-wrap: anywhere; }
+.c360-twin-person small, .c360-twin-match small { display: block; font-size: 0.7rem; color: var(--c360-muted); }
+.c360-twin-match { text-align: right; flex-shrink: 0; }
+.c360-twin-match strong { font-size: 1.15rem; color: var(--c360-primary-strong); }
+.c360-twin-meter { display: block; width: 100%; height: 7px; margin: 12px 0; border: 0; background: #E4EBF4; border-radius: 4px; }
+.c360-twin-meter::-webkit-meter-bar { background: #E4EBF4; border: 0; border-radius: 4px; }
+.c360-twin-meter::-webkit-meter-optimum-value { background: #0057B8; border-radius: 4px; }
+.c360-twin-meter::-moz-meter-bar { background: #0057B8; border-radius: 4px; }
+.c360-twin-facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--c360-muted); font-size: 0.78rem; }
+.c360-twin-facts > span { display: inline-flex; align-items: center; gap: 4px; }
+.c360-twin-housing { color: var(--c360-muted); font-size: 0.78rem; margin: 4px 0 14px; }
+.c360-twin-neighbor-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--c360-border); padding: 10px 0; color: var(--c360-primary-strong); font-size: 0.78rem; font-weight: 600; }
+[class*="st-key-twin_open_"] { position: absolute !important; inset: 0; width: 100% !important; height: 100%; z-index: 5; margin: 0 !important; }
+[class*="st-key-twin_open_"] div { width: 100%; height: 100%; }
+[class*="st-key-twin_open_"] button { width: 100%; height: 100%; background: transparent !important; border: 0 !important; box-shadow: none !important; color: transparent !important; border-radius: 8px !important; }
+[class*="st-key-twin_open_"] button p { color: transparent !important; }
+[class*="st-key-twin_open_"] button:focus-visible { outline: 3px solid var(--c360-primary) !important; outline-offset: 2px; }
+[class*="st-key-twin_neighbor_"]:hover .c360-twin-neighbor { border-color: var(--c360-primary); background: #F4F8FD; }
+@media (max-width: 640px) {
+  .st-key-twin_kpis [data-testid="stColumn"] + [data-testid="stColumn"] { border-left: 0; }
+  .st-key-twin_kpis [data-testid="stMetric"] { min-height: 0; padding: 8px 0; }
+  .st-key-twin_sections [data-baseweb="tab-list"] { gap: 16px; }
+  .st-key-twin_sections [data-baseweb="tab"] p { font-size: 0.78rem; }
+}
+
 /* 12. Versicherungsdetailseite */
 
 /* Neutrale Kategorie (blau) für Empfehlungen ohne besonderen Handlungsbedarf */

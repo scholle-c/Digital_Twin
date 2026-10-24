@@ -12,8 +12,10 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
+from components.region_view import render_region_view
+from components.ui import esc, icon, render_html
 from data.twin_data import get_customers
-from i18n import t
+from i18n import t, tr
 from state import select_customer
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
@@ -49,18 +51,32 @@ def render_twin_comparison(customer_id: str) -> None:
     neighbors = nearest(portfolio, customer_id, k=5)
     names = {customer.id: customer.name for customer in get_customers()}
 
-    st.subheader(t("twin_heading", n=len(portfolio.ids) - 1))
-    _render_kpis(portfolio, customer_id, neighbors, names)
-
-    st.markdown(f"**{t('twin_position')}**")
-    st.plotly_chart(
-        _position_chart(portfolio, customer_id, names[customer_id]), width="stretch", key="twin_position_chart",
-        theme=None, config={"displayModeBar": False, "scrollZoom": False},
+    render_html(
+        f'<div class="c360-twin-heading"><div><span class="c360-twin-eyebrow">'
+        f'{esc(t("twin_analysis"))}</span><h3>{esc(t("twin_position"))}</h3></div>'
+        f'<span class="c360-twin-count">{icon("users")} {esc(t("twin_population", n=len(portfolio.ids)))}</span></div>'
     )
-    st.caption(t("twin_position_note"))
+    with st.container(key="twin_kpis"):
+        _render_kpis(portfolio, customer_id, neighbors, names)
 
-    st.markdown(f"**{t('twin_neighbors')}**")
-    _render_neighbors(portfolio, neighbors, names)
+    with st.container(key="twin_sections"):
+        profile, regional, similar = st.tabs([
+            t("twin_profile_tab"), t("twin_region_tab"), t("twin_similar_tab"),
+        ])
+        with profile:
+            st.caption(t("twin_position_note"))
+            st.plotly_chart(
+                _position_chart(portfolio, customer_id, names[customer_id]), width="stretch", key="twin_position_chart",
+                theme=None, config={"displayModeBar": False, "scrollZoom": False},
+            )
+        with regional:
+            render_region_view(customer_id)
+        with similar:
+            render_html(
+                f'<div class="c360-twin-section-title"><h4>{esc(t("twin_neighbors"))}</h4>'
+                f'<span>{esc(t("twin_neighbor_count", n=len(neighbors)))}</span></div>'
+            )
+            _render_neighbors(portfolio, neighbors, names)
 
 
 def _render_kpis(portfolio: Portfolio, customer_id: str, neighbors: list[tuple[str, float]], names: dict[str, str]) -> None:
@@ -68,16 +84,19 @@ def _render_kpis(portfolio: Portfolio, customer_id: str, neighbors: list[tuple[s
     percentiles = {m: percentile(portfolio, customer_id, m) for m in portfolio.metric_groups}
     outlier = max(percentiles, key=percentiles.get)
     first, second, third = st.columns(3)
-    with first.container(key="twin_identity"):
-        st.metric(t("twin_most_similar"), names[neighbors[0][0]],
-                  f"{neighbors[0][0]} · {neighbors[0][1]:.0%}", delta_color="off")
-    second.metric(
+    first.metric(
         t("twin_damage"),
         f"{snapshot.expected_damage_eur:,.0f} €".replace(",", "."),
         t("twin_damage_rank", rank=damage_rank(portfolio, customer_id), n=len(portfolio.ids)),
         delta_color="off",
     )
-    third.metric(t("twin_outlier"), outlier, t("twin_outlier_value", p=percentiles[outlier]), delta_color="off")
+    second.metric(t("twin_outlier"), tr(outlier), t("twin_outlier_value", p=percentiles[outlier]), delta_color="off")
+    with third.container(key="twin_identity"):
+        if neighbors:
+            st.metric(t("twin_most_similar"), names[neighbors[0][0]],
+                      f"{neighbors[0][0]} · {neighbors[0][1]:.0%}", delta_color="off")
+        else:
+            st.metric(t("twin_most_similar"), t("not_specified"))
 
 
 def _position_chart(portfolio: Portfolio, customer_id: str, customer_name: str) -> go.Figure:
@@ -94,7 +113,7 @@ def _position_chart(portfolio: Portfolio, customer_id: str, customer_name: str) 
         figure.add_trace(
             go.Bar(
                 y=metrics, x=average, orientation="h",
-                marker={"color": "#DCE4EF", "cornerradius": 4},
+                marker={"color": "#B7C7DA", "cornerradius": 4},
                 text=[f"{v:.1f} %" for v in average], textposition="outside",
                 textfont={"color": "#5B6B82", "size": 11}, cliponaxis=False,
                 hovertemplate="%{y}<br>" + t("twin_average") + ": %{x:.1f} %<extra></extra>",
@@ -124,8 +143,8 @@ def _position_chart(portfolio: Portfolio, customer_id: str, customer_name: str) 
     figure.update_layout(
         barmode="group", bargap=0.35, bargroupgap=0.08,
         height=130 + 62 * len(portfolio.metric_groups),
-        margin={"l": 10, "r": 45, "t": 45, "b": 45},
-        legend={"orientation": "h", "y": -0.12, "traceorder": "reversed", "font": {"size": 11}},
+        margin={"l": 10, "r": 45, "t": 90, "b": 30},
+        legend={"orientation": "h", "y": 1.18, "x": 0, "traceorder": "reversed", "font": {"size": 11}},
         font={"family": "Inter, sans-serif", "color": "#1E293B", "size": 12},
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
     )
@@ -136,6 +155,37 @@ def _position_chart(portfolio: Portfolio, customer_id: str, customer_name: str) 
 
 
 def _render_neighbors(portfolio: Portfolio, neighbors: list[tuple[str, float]], names: dict[str, str]) -> None:
+    if not neighbors:
+        st.info(t("not_specified"))
+        return
+    for start in range(0, len(neighbors), 2):
+        columns = st.columns(2, gap="small")
+        for column, (neighbor_id, similarity) in zip(columns, neighbors[start:start + 2]):
+            snapshot = portfolio.snapshots[neighbor_id]
+            rank = next(index for index, entry in enumerate(neighbors, start=1) if entry[0] == neighbor_id)
+            initials = "".join(part[0] for part in names[neighbor_id].split()[:2])
+            with column.container(key=f"twin_neighbor_{neighbor_id}"):
+                render_html(
+                    f'<div class="c360-twin-neighbor{" is-closest" if rank == 1 else ""}">'
+                    f'<div class="c360-twin-neighbor-top"><span class="c360-twin-initials">{esc(initials)}</span>'
+                    f'<div class="c360-twin-person"><strong>{esc(names[neighbor_id])}</strong>'
+                    f'<small>{esc(neighbor_id)}</small></div>'
+                    f'<span class="c360-twin-match"><strong>{similarity:.0%}</strong>'
+                    f'<small>{esc(t("twin_similarity"))}</small></span></div>'
+                    f'<meter class="c360-twin-meter" min="0" max="1" value="{similarity:.4f}" '
+                    f'aria-label="{esc(t("twin_similarity"))}">{similarity:.0%}</meter>'
+                    f'<div class="c360-twin-facts"><span>{icon("map_pin", "c360-icon c360-icon-xs")}'
+                    f'{esc(snapshot.city or t("not_specified"))}</span><span>{esc(snapshot.age_group)} '
+                    f'{esc(t("twin_years"))}</span></div>'
+                    f'<div class="c360-twin-housing">{esc(tr(BUILDING_TYPES.get(snapshot.building_type, snapshot.building_type)))}</div>'
+                    f'<div class="c360-twin-neighbor-footer"><span>{esc(t("twin_open_profile"))}</span>'
+                    f'{icon("chevron_right", "c360-icon c360-icon-sm")}</div></div>'
+                )
+                st.button(
+                    t("twin_open", name=names[neighbor_id]), key=f"twin_open_{neighbor_id}",
+                    help=t("twin_open", name=names[neighbor_id]),
+                    on_click=select_customer, args=(neighbor_id,), width="stretch",
+                )
     metrics = list(portfolio.metric_groups)
     rows = []
     for neighbor_id, similarity in neighbors:
@@ -153,13 +203,5 @@ def _render_neighbors(portfolio: Portfolio, neighbors: list[tuple[str, float]], 
                 **{m: f"{snapshot.metrics[m]:.0%}" for m in metrics},
             }
         )
-    st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-    columns = st.columns(2)
-    for index, (neighbor_id, _) in enumerate(neighbors):
-        with columns[index % 2]:
-            st.button(
-                t("twin_open", name=names[neighbor_id]),
-                key=f"twin_open_{neighbor_id}", icon=":material/arrow_forward:",
-                on_click=select_customer, args=(neighbor_id,), width="stretch",
-            )
-            st.caption(neighbor_id)
+    with st.expander(t("twin_comparison_details"), icon=":material/table_chart:"):
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
