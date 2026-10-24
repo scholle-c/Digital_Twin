@@ -61,7 +61,9 @@ def render_twin_comparison(customer_id: str) -> None:
 
     with st.container(key="twin_sections"):
         profile, regional, similar = st.tabs([
-            t("twin_profile_tab"), t("twin_region_tab"), t("twin_similar_tab"),
+            f":material/monitoring: {t('twin_profile_tab')}",
+            f":material/map: {t('twin_region_tab')}",
+            f":material/groups: {t('twin_similar_tab')}",
         ])
         with profile:
             st.caption(t("twin_position_note"))
