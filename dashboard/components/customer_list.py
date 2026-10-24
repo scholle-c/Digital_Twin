@@ -39,7 +39,7 @@ def render_customer_card(customer: Customer, rank: int, is_selected: bool) -> No
             <div class="c360-cust-card {category_class(customer.category)}{selected_class}">
                 <div class="c360-cust-top">
                     <span class="c360-rank" aria-label="{t("rank", n=rank)}">{rank}</span>
-                    <span class="c360-cust-name">{esc(customer.name)}</span>
+                    <span class="c360-cust-name">{esc(customer.name)}<small class="c360-customer-id">{esc(customer.id)}</small></span>
                     {icon("chevron_right", "c360-icon c360-chevron")}
                 </div>
                 <div class="c360-cust-body">

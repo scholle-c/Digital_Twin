@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
+from data.twin_data import get_customers
 from i18n import t
 from state import select_customer
 
@@ -46,27 +47,30 @@ def render_twin_comparison(customer_id: str) -> None:
         st.info(t("not_specified"))
         return
     neighbors = nearest(portfolio, customer_id, k=5)
+    names = {customer.id: customer.name for customer in get_customers()}
 
     st.subheader(t("twin_heading", n=len(portfolio.ids) - 1))
-    _render_kpis(portfolio, customer_id, neighbors)
+    _render_kpis(portfolio, customer_id, neighbors, names)
 
     st.markdown(f"**{t('twin_position')}**")
     st.plotly_chart(
-        _position_chart(portfolio, customer_id), width="stretch", key="twin_position_chart",
+        _position_chart(portfolio, customer_id, names[customer_id]), width="stretch", key="twin_position_chart",
         theme=None, config={"displayModeBar": False, "scrollZoom": False},
     )
     st.caption(t("twin_position_note"))
 
     st.markdown(f"**{t('twin_neighbors')}**")
-    _render_neighbors(portfolio, neighbors)
+    _render_neighbors(portfolio, neighbors, names)
 
 
-def _render_kpis(portfolio: Portfolio, customer_id: str, neighbors: list[tuple[str, float]]) -> None:
+def _render_kpis(portfolio: Portfolio, customer_id: str, neighbors: list[tuple[str, float]], names: dict[str, str]) -> None:
     snapshot = portfolio.snapshots[customer_id]
     percentiles = {m: percentile(portfolio, customer_id, m) for m in portfolio.metric_groups}
     outlier = max(percentiles, key=percentiles.get)
     first, second, third = st.columns(3)
-    first.metric(t("twin_most_similar"), f"{neighbors[0][0]} · {neighbors[0][1]:.0%}")
+    with first.container(key="twin_identity"):
+        st.metric(t("twin_most_similar"), names[neighbors[0][0]],
+                  f"{neighbors[0][0]} · {neighbors[0][1]:.0%}", delta_color="off")
     second.metric(
         t("twin_damage"),
         f"{snapshot.expected_damage_eur:,.0f} €".replace(",", "."),
@@ -76,7 +80,7 @@ def _render_kpis(portfolio: Portfolio, customer_id: str, neighbors: list[tuple[s
     third.metric(t("twin_outlier"), outlier, t("twin_outlier_value", p=percentiles[outlier]), delta_color="off")
 
 
-def _position_chart(portfolio: Portfolio, customer_id: str) -> go.Figure:
+def _position_chart(portfolio: Portfolio, customer_id: str, customer_name: str) -> go.Figure:
     groups = list(dict.fromkeys(portfolio.metric_groups.values()))
     figure = make_subplots(
         rows=len(groups), cols=1, subplot_titles=groups, vertical_spacing=0.16,
@@ -106,10 +110,10 @@ def _position_chart(portfolio: Portfolio, customer_id: str) -> go.Figure:
                 textfont={"color": HIGHLIGHT, "size": 12},
                 customdata=ranks,
                 hovertemplate=(
-                    "%{y}<br>" + customer_id + ": %{x:.1f} %<br>"
+                    "%{y}<br>" + customer_name + ": %{x:.1f} %<br>" + customer_id + "<br>"
                     + t("twin_outlier_value", p="%{customdata}") + "<extra></extra>"
                 ),
-                name=customer_id, legendgroup="me", showlegend=row == 1,
+                name=customer_name, legendgroup="me", showlegend=row == 1,
             ),
             row=row, col=1,
         )
@@ -131,14 +135,15 @@ def _position_chart(portfolio: Portfolio, customer_id: str) -> go.Figure:
     return figure
 
 
-def _render_neighbors(portfolio: Portfolio, neighbors: list[tuple[str, float]]) -> None:
+def _render_neighbors(portfolio: Portfolio, neighbors: list[tuple[str, float]], names: dict[str, str]) -> None:
     metrics = list(portfolio.metric_groups)
     rows = []
     for neighbor_id, similarity in neighbors:
         snapshot = portfolio.snapshots[neighbor_id]
         rows.append(
             {
-                "Kunde": neighbor_id,
+                "Kunde": names[neighbor_id],
+                "ID": neighbor_id,
                 "Ähnlichkeit": f"{similarity:.0%}",
                 "Ort": snapshot.city or "–",
                 "Alter": snapshot.age_group,
@@ -149,11 +154,12 @@ def _render_neighbors(portfolio: Portfolio, neighbors: list[tuple[str, float]]) 
             }
         )
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-    for column, (neighbor_id, _) in zip(st.columns(len(neighbors)), neighbors):
-        column.button(
-            t("twin_open", id=neighbor_id),
-            key=f"twin_open_{neighbor_id}",
-            on_click=select_customer,
-            args=(neighbor_id,),
-            width="stretch",
-        )
+    columns = st.columns(2)
+    for index, (neighbor_id, _) in enumerate(neighbors):
+        with columns[index % 2]:
+            st.button(
+                t("twin_open", name=names[neighbor_id]),
+                key=f"twin_open_{neighbor_id}", icon=":material/arrow_forward:",
+                on_click=select_customer, args=(neighbor_id,), width="stretch",
+            )
+            st.caption(neighbor_id)

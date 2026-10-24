@@ -9,6 +9,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from components.region_timeline import render_timeline
 from i18n import t
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
@@ -34,8 +35,22 @@ def _state_of(customer_id: str) -> str:
         return ""
 
 
-def render_region_view(customer_id: str) -> None:
+def _set_fullscreen(enabled: bool) -> None:
+    st.session_state.region_fullscreen = enabled
+    st.session_state.detail_tab = "twin"
+
+
+def render_region_view(customer_id: str, fullscreen: bool = False) -> None:
     """Heatmap mit Zeitschieber, Kennzahl-Auswahl und Prognose-Kennzahlen je Bundesland."""
+    with st.container(key="region_controls"):
+        filters, action = st.columns([6, 1], vertical_alignment="bottom")
+        action.button(
+            t("region_exit_fullscreen") if fullscreen else t("region_fullscreen"),
+            icon=":material/fullscreen_exit:" if fullscreen else ":material/fullscreen:",
+            help=t("region_exit_fullscreen") if fullscreen else t("region_fullscreen"),
+            key="region_fullscreen_button", on_click=_set_fullscreen,
+            args=(not fullscreen,), width="stretch",
+        )
     incidents, disasters = load_incidents_df(), load_disasters_df()
     if incidents.empty:
         st.info(t("region_no_data"))
@@ -44,14 +59,17 @@ def render_region_view(customer_id: str) -> None:
     regions = [t("region_all")] + fc.regions()
     default = regions.index(home_state) if home_state in regions else 0
 
-    c1, c2, c3 = st.columns([1.2, 1.2, 2])
+    c1, c2 = filters.columns(2)
     region = c1.selectbox(t("region_filter"), regions, index=default, key="region_filter")
     metric = c2.selectbox(t("region_metric"), list(METRIC_GROUPS), format_func=lambda m: METRIC_GROUPS[m], key="region_metric")
-    step = c3.slider(t("region_step"), -24, 12, 0, key="region_step",
-                     help=t("region_step_help"))
+    with st.container(key="region_timeline"):
+        labels = {}
+        for month in range(-24, 13):
+            phase = t("region_past") if month < 0 else t("region_now") if month == 0 else t("region_forecast")
+            offset = "" if month == 0 else f" · {t('region_month_offset', n=f'{month:+d}')}"
+            labels[str(month)] = f"{fc._label(fc.LAST_MONTH, month)} · {phase}{offset}"
+        step = render_timeline(labels)
     region_arg = None if region == t("region_all") else region
-    phase = t("region_past") if step < 0 else t("region_now") if step == 0 else t("region_future", n=step)
-    st.caption(f"**{fc._label(fc.LAST_MONTH, step)}** · {phase}")
 
     points = heat_points_for_step(incidents, metric, step, region_arg)
     # Naturereignisse nur, wenn sie zur Kennzahl passen (bei Einbruch keine)
@@ -60,8 +78,12 @@ def render_region_view(customer_id: str) -> None:
     if region_arg and not nature.empty:
         nature = nature[nature["region"] == region_arg]
     center = STATE_CENTERS.get(region_arg) if region_arg else (51.1, 10.4)
-    render_heatmap(points, nature, home=None, center=center, zoom=6 if region_arg else 4.8, height=420, key="region_map",
-                   color_domain=[4, 40], color_range=HEAT_RANGE_CONTRAST, radius_pixels=32)   # feste, kontrastreiche Skala
+    with st.container(key="region_map_stage"):
+        render_heatmap(points, nature, home=None, center=center, zoom=6 if region_arg else 4.8,
+                       height="stretch" if fullscreen else 420, key="region_map",
+                       color_domain=[4, 40], color_range=HEAT_RANGE_CONTRAST, radius_pixels=32)
+    if fullscreen:
+        return
     st.caption(t("region_map_note"))
 
     # Kennzahlen je Bundesland für den gewählten Monat, sortiert nach Wert

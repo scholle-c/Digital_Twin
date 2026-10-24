@@ -10,6 +10,7 @@ rollierenden 12-Monats-Fenster, Zukunft = Vorfallorte gewichtet mit der Prognose
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -164,13 +165,13 @@ def _real_points_for_step(incidents: pd.DataFrame, metric: str, step: int, regio
     import forecast as fc
     now, future = fc.heatmap_frame(metric, 0), fc.heatmap_frame(metric, step)
     factor = {r: future[r] / now[r] if now.get(r) else 1.0 for r in future}
-    return data.assign(weight=data["severity_level"].astype(float) * data["region"].map(factor).fillna(1.0),
+    return data.assign(weight=data["severity_level"].astype(float) * data["region"].map(factor).astype(float).fillna(1.0),
                        tip=data["label"] + " · " + data["city"] + " · Prognose +" + str(step) + " Mon.")
 
 
 # ---------- Karte ----------
 def render_heatmap(points: pd.DataFrame, nature: pd.DataFrame | None = None, home: tuple[float, float] | None = None,
-                   center: tuple[float, float] | None = None, zoom: float | None = None, height: int = 380,
+                   center: tuple[float, float] | None = None, zoom: float | None = None, height: int | Literal["stretch"] = 380,
                    key: str | None = None, color_domain: list[float] | None = None, markers: bool = True,
                    color_range: list[list[int]] | None = None, radius_pixels: int = 45) -> None:
     """Zeichnet die Heatmap. points braucht longitude, latitude, weight, tip.

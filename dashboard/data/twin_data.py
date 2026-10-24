@@ -226,3 +226,17 @@ def get_customers() -> list[Customer]:
 def get_customer(customer_id: str) -> Customer | None:
     """Kunde anhand seiner ID oder None, falls unbekannt."""
     return next((c for c in get_customers() if c.id == customer_id), None)
+
+
+def prioritized_demo_customers(customers: list[Customer], limit: int = 5) -> list[Customer]:
+    selected = []
+    prevention_count = 0
+    for customer in customers:
+        if len(selected) >= limit:
+            break
+        if customer.category == "prevention":
+            if prevention_count >= 2:
+                continue
+            prevention_count += 1
+        selected.append(customer)
+    return selected

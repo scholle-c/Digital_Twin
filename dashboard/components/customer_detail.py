@@ -59,6 +59,7 @@ def render_customer_header(customer: Customer) -> None:
                     <span class="c360-avatar">{icon("user")}</span>
                     <div>
                         <div class="c360-profile-name" role="heading" aria-level="2">{esc(customer.name)}</div>
+                        <div class="c360-customer-id">{esc(customer.id)}</div>
                         <div class="c360-profile-meta">{t("years", n=customer.age)}<span class="c360-sep">·</span>{esc(customer.city)}<span class="c360-sep">·</span>{esc(customer.housing)}</div>
                     </div>
                 </div>

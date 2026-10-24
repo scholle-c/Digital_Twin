@@ -21,7 +21,8 @@ from components.coverage_detail import render_coverage_page
 from components.customer_detail import render_customer_detail
 from components.customer_list import render_customer_list
 from components.layout import load_css, render_header, render_sidebar
-from data.twin_data import get_customers
+from components.region_view import render_region_view
+from data.twin_data import get_customers, prioritized_demo_customers
 from data.mock_data import ADVISOR
 from i18n import t
 from state import VIEW_COVERAGE, init_session_state
@@ -37,11 +38,16 @@ st.set_page_config(
 # 2. Zentrales CSS mit Design-Tokens laden (Farben, Karten, Klick-Overlays).
 load_css(Path(__file__).parent / "styles" / "dashboard.css")
 
+if st.session_state.get("region_fullscreen") and st.session_state.get("selected_customer_id"):
+    with st.container(key="region_presentation"):
+        render_region_view(st.session_state.selected_customer_id, fullscreen=True)
+    st.stop()
+
 # 3. Kunden aus ihren Digital Twins laden; die Liste ist bereits fachlich priorisiert.
 customers = get_customers()
 # Demo: nur die wichtigsten Kunden auflisten; Auswahl und Twin-Vergleich nutzen weiter alle.
 PRIORITY_LIST_SIZE = 5
-prioritized_customers = customers[:PRIORITY_LIST_SIZE]
+prioritized_customers = prioritized_demo_customers(customers, limit=PRIORITY_LIST_SIZE)
 
 # 4. Sitzungszustand initialisieren; standardmäßig ist der wichtigste Kunde ausgewählt.
 init_session_state(default_customer_id=customers[0].id)

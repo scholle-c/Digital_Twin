@@ -11,6 +11,7 @@ import streamlit as st
 
 from components.ui import esc, icon, render_html
 from components.ai import ai_available, chat_answer
+from data.twin_data import get_customer
 from i18n import t
 from state import toggle_language
 
@@ -84,7 +85,9 @@ def render_chat() -> None:
     customer_id = st.session_state.get("selected_customer_id")
     if not customer_id:
         return
-    st.markdown(f"**{t('chat_title', id=customer_id)}**")
+    customer = get_customer(customer_id)
+    st.markdown(f"**{t('chat_title', name=customer.name if customer else t('not_specified'))}**")
+    st.caption(customer_id)
     if not ai_available():
         st.caption(t("ai_no_key"))
         return

@@ -40,6 +40,67 @@
   --c360-font: "Inter", "Segoe UI", Arial, system-ui, sans-serif;
 }
 
+.stApp:has(.st-key-region_presentation) [data-testid="stSidebar"],
+.stApp:has(.st-key-region_presentation) [data-testid="stSidebarCollapsedControl"] {
+  display: none !important;
+}
+.st-key-region_presentation {
+  --map-toolbar-height: 100px;
+  --map-timeline-height: 154px;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--c360-bg);
+}
+.st-key-region_presentation .st-key-region_controls,
+.st-key-region_presentation .st-key-region_timeline {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 102;
+  background: var(--c360-card);
+  padding: 12px 24px;
+  border-radius: 0;
+}
+.st-key-region_presentation .st-key-region_controls {
+  top: 0;
+  height: var(--map-toolbar-height);
+  border-bottom: 1px solid var(--c360-border);
+}
+.st-key-region_presentation .st-key-region_timeline {
+  bottom: 0;
+  height: var(--map-timeline-height);
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--c360-border);
+}
+.st-key-region_presentation .st-key-region_map_stage {
+  position: fixed;
+  top: var(--map-toolbar-height);
+  bottom: var(--map-timeline-height);
+  left: 0;
+  right: 0;
+  height: auto;
+  min-height: 0;
+  z-index: 101;
+}
+.st-key-region_presentation .st-key-region_map_stage > [data-testid="stVerticalBlock"] {
+  height: 100%;
+  min-height: 0;
+}
+.st-key-region_presentation [data-testid="stElementToolbar"] { display: none; }
+.st-key-region_presentation .st-key-region_controls [data-testid="stHorizontalBlock"] {
+  flex-wrap: nowrap;
+}
+.st-key-region_presentation .st-key-region_controls [data-testid="stColumn"] {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .st-key-region_presentation .st-key-region_controls,
+  .st-key-region_presentation .st-key-region_timeline { padding-left: 12px; padding-right: 12px; }
+  .st-key-region_presentation .st-key-region_controls [data-testid="stButton"] button p { display: none; }
+}
+
 /* Kategorie-Farben: jede Komponente nutzt nur --cat, --cat-text, --cat-soft usw. */
 .c360-cat-prevention, .st-key-reco_box_prevention, .st-key-actbox_prevention {
   --cat: var(--c360-red); --cat-text: var(--c360-red); --cat-soft: var(--c360-red-soft);
@@ -180,6 +241,8 @@ header[data-testid="stHeader"],
   background: var(--c360-grey-soft); color: var(--c360-muted); font-weight: 600; font-size: 0.8rem;
 }
 .c360-cust-name { flex: 1; min-width: 0; color: var(--c360-navy); font-size: 0.95rem; font-weight: 700; overflow-wrap: anywhere; }
+.c360-customer-id { display: block; color: var(--c360-muted); font-size: 0.75rem; font-weight: 400; line-height: 1.5; }
+.st-key-twin_identity [data-testid="stMetricValue"] > div { white-space: normal; overflow-wrap: anywhere; font-size: 1.1rem; }
 .c360-chevron { color: #475569; }
 .c360-cust-body { margin-top: 0.65rem; }
 .c360-cust-body > .c360-icon-circle { display: none; }
