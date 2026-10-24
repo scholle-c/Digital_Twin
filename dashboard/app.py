@@ -73,7 +73,7 @@ else:
     render_sidebar(active="nav_overview")
     render_header(ADVISOR, open_customers=len(prioritized_customers))
     with st.container(key="workspace"):
-        list_column, detail_column = st.columns([1, 2.8], gap="medium")
+        list_column, detail_column = st.columns([1, 2.6], gap="large")
         with list_column:
             render_customer_list(prioritized_customers, selected_customer.id)
         with detail_column:

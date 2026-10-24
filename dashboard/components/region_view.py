@@ -40,6 +40,14 @@ def _set_fullscreen(enabled: bool) -> None:
     st.session_state.detail_tab = "twin"
 
 
+@st.cache_data(show_spinner=False)
+def _intensity_series(incidents, metric: str, region: str | None) -> dict[str, float]:
+    return {
+        str(month): float(heat_points_for_step(incidents, metric, month, region)["weight"].sum())
+        for month in range(-24, 13)
+    }
+
+
 def render_region_view(customer_id: str, fullscreen: bool = False) -> None:
     """Heatmap mit Zeitschieber, Kennzahl-Auswahl und Prognose-Kennzahlen je Bundesland."""
     with st.container(key="region_controls"):
@@ -62,14 +70,14 @@ def render_region_view(customer_id: str, fullscreen: bool = False) -> None:
     c1, c2 = filters.columns(2)
     region = c1.selectbox(t("region_filter"), regions, index=default, key="region_filter")
     metric = c2.selectbox(t("region_metric"), list(METRIC_GROUPS), format_func=lambda m: METRIC_GROUPS[m], key="region_metric")
+    region_arg = None if region == t("region_all") else region
     with st.container(key="region_timeline"):
         labels = {}
         for month in range(-24, 13):
             phase = t("region_past") if month < 0 else t("region_now") if month == 0 else t("region_forecast")
             offset = "" if month == 0 else f" · {t('region_month_offset', n=f'{month:+d}')}"
             labels[str(month)] = f"{fc._label(fc.LAST_MONTH, month)} · {phase}{offset}"
-        step = render_timeline(labels)
-    region_arg = None if region == t("region_all") else region
+        step = render_timeline(labels, _intensity_series(incidents, metric, region_arg))
 
     points = heat_points_for_step(incidents, metric, step, region_arg)
     # Naturereignisse nur, wenn sie zur Kennzahl passen (bei Einbruch keine)

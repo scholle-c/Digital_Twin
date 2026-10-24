@@ -121,15 +121,19 @@ def render_header(advisor: dict[str, str], open_customers: int) -> None:
     """Rendert die Begrüßung des Beraters sowie Benachrichtigungs- und Benutzerbereich."""
     name = esc(advisor["first_name"])
     subline = t("subline_one") if open_customers == 1 else t("subline_many", n=open_customers)
+    with st.container(key="advisor_topbar"):
+        render_html(
+            f'<div class="c360-advisor-topbar"><span class="c360-workspace-label">'
+            f'{esc(t("workspace_label"))}</span>{header_actions_html(advisor)}</div>'
+        )
     render_html(
         f"""
         <div class="c360-header">
+            <span class="c360-page-icon">{icon("users")}</span>
             <div>
-                <div class="c360-workspace-label">{t("workspace_label")}</div>
                 <div class="c360-greeting" role="heading" aria-level="1">{_greeting()}, {name}</div>
                 <div class="c360-subline">{subline}</div>
             </div>
-            {header_actions_html(advisor)}
         </div>
         """
     )
