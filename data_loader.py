@@ -82,8 +82,14 @@ FIRST_NAMES = {
 LAST_NAMES = ["Bauer", "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Hoffmann"]
 
 
+# Feste Demo-Personas: diese IDs heißen immer so (Demo-Ablauf).
+NAME_OVERRIDES = {"C0021": ("Anna", "Schneider")}   # Anna: 20-29, Studentin, Single, Erlangen
+
+
 def display_name(customer_id: str, gender: str = "diverse", folder: str | Path | None = None) -> tuple[str, str]:
-    """(Vorname, Nachname) für einen Kunden; aus portal_profiles.csv, sonst deterministisch erzeugt."""
+    """(Vorname, Nachname) für einen Kunden; Demo-Persona, sonst portal_profiles.csv, sonst deterministisch."""
+    if customer_id in NAME_OVERRIDES:
+        return NAME_OVERRIDES[customer_id]
     folder = Path(folder) if folder is not None else DATA_FOLDER
     overlay = folder / "portal_profiles.csv"
     if overlay.exists():

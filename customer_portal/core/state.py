@@ -11,7 +11,8 @@ from datetime import datetime
 
 import streamlit as st
 
-from core.data import DEMO_PASSWORD, customer_ids, home_coords, initial_notifications, initial_policies, initial_profile, save_profile_to_csv
+from core.data import (DEMO_PASSWORD, EVENT_LABELS, add_life_event, customer_ids, home_coords, initial_notifications,
+                       initial_policies, initial_profile, save_profile_to_csv)
 
 # Seiten des Portals: Schlüssel -> (Titel, Material-Icon).
 PAGES = {
@@ -81,7 +82,7 @@ def login(customer_id: str) -> None:
         st.session_state.notifications = []
     st.session_state.customer_id = customer_id
     st.session_state.profile = initial_profile(customer_id)
-    st.session_state.policies = initial_policies()
+    st.session_state.policies = initial_policies(st.session_state.profile)
     st.session_state.authenticated = True
     st.session_state.page = "home"
     if not st.session_state.notifications:
@@ -210,6 +211,27 @@ def save_profile(changes: dict) -> None:
     save_profile_to_csv(st.session_state.profile)          # zurück in die CSV-Dateien (Source of Truth)
     st.session_state.edit_section = None
     notify("Profil gespeichert und in die Kundendaten übernommen")
+
+
+# Meldet ein Lebensereignis; bei Umzug wird auch die Adresse im Profil und in customers.csv aktualisiert.
+def report_life_event(event_type: str, event_date, new_postal: str = "", new_city: str = "", new_state: str = "") -> None:
+    """Schreibt das Ereignis nach life_events.csv und passt bei Umzug die Adresse an."""
+    profile = st.session_state.profile
+    add_life_event(profile["customer_id"], event_type, event_date)
+    if event_type == "umzug" and new_postal and new_city:
+        profile.update(postal_code=new_postal, city=new_city, federal_state=new_state or profile.get("federal_state", ""))
+        save_profile_to_csv(profile)
+        st.session_state.notifications = []          # Mitteilungen für den neuen Wohnort neu aufbauen
+        coords = home_coords(profile["postal_code"], profile["federal_state"])
+        st.session_state.notifications = initial_notifications(profile["postal_code"], coords)
+    st.session_state.notifications.insert(0, {
+        "id": f"event_{event_type}_{event_date.isoformat()}", "category": "system", "date": event_date,
+        "title": f"{EVENT_LABELS.get(event_type, event_type)} gemeldet",
+        "text": "Ihr Digital Twin wurde aktualisiert. Empfehlungen und Absicherungsgrad passen sich an.",
+        "page": "home", "read": False,
+    })
+    st.session_state.event_form_open = False
+    notify(f"{EVENT_LABELS.get(event_type, event_type)} gespeichert – Ihr Digital Twin wurde aktualisiert")
 
 
 # ------------------------------------------------------------

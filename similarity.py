@@ -25,7 +25,7 @@ def all_customers() -> dict[str, Customer]:
         _customers_cache.update(stamp=stamp, customers=load_all_customers())
     return _customers_cache["customers"]
 
-EVENT_TYPES = ["kind", "auto"]
+EVENT_TYPES = ["kind", "auto", "umzug"]
 WINDOW_DAYS = 730   # Demo-Daten: nur 1 Event pro Kunde, daher 24 Monate; bei echten Daten 365
 
 FEATURES = {                                   # Merkmal: (Typ, Gewicht)

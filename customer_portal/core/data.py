@@ -72,6 +72,12 @@ RELATIONSHIP_CODES = {v: k for k, v in RELATIONSHIP.items()}
 INTEREST_CODES = {v: k for k, v in INTERESTS.items()}
 
 
+# Demo-Persona Anna: Kontaktdaten für die Vorführung (sonst Platzhalter).
+DEMO_PERSONAS = {
+    "C0021": {"street": "Bismarckstraße 12", "email": "anna.schneider@example.com", "phone": "+49 151 2345678",
+              "channels": ["App-Benachrichtigung", "E-Mail"], "contact_time": "Abends"},
+}
+
 # Spalten, die nur das Portal kennt (nicht in customers.csv). Liegen in portal_profiles.csv.
 PORTAL_FIELDS = ["first_name", "last_name", "street", "email", "phone", "children", "household_size",
                  "channels", "contact_time", "newsletter"]
@@ -122,7 +128,9 @@ def home_coords(postal_code: str, federal_state: str = "") -> tuple[float, float
 def initial_profile(customer_id: str) -> dict:
     """Gibt das Startprofil eines Kunden als Dict zurück."""
     row = customer_row(customer_id)
-    extra = _portal_row(customer_id)
+    extra = {**DEMO_PERSONAS.get(customer_id, {}), **_portal_row(customer_id)}
+    if isinstance(extra.get("channels"), list):
+        extra["channels"] = ";".join(extra["channels"])
     gender = row.get("gender", "diverse")
     first, last = display_name(customer_id, gender)
     children = sum(1 for e in _read_csv("life_events.csv") if e["customer_id"] == customer_id and e["event_type"] == "kind")
@@ -178,6 +186,8 @@ def save_profile_to_csv(profile: dict) -> None:
                 row["age_group"] = age_group_for(profile["birth_date"])
                 row["postal_code"] = profile["postal_code"]
                 row["residence_city"] = profile["city"]
+                if profile.get("federal_state"):
+                    row["federal_state"] = profile["federal_state"]
                 row["relationship_status"] = RELATIONSHIP_CODES.get(profile["relationship_status"], row["relationship_status"])
                 row["occupation"] = OCCUPATION_CODES.get(profile["occupation"], row["occupation"])
                 row["interests"] = ";".join(INTEREST_CODES.get(i, i) for i in profile["interests"])
@@ -190,6 +200,172 @@ def save_profile_to_csv(profile: dict) -> None:
     extra_rows.sort(key=lambda r: r["customer_id"])
     _write_csv("portal_profiles.csv", extra_rows, ["customer_id", *PORTAL_FIELDS])
     st.cache_data.clear()   # Twin-Ergebnisse und CSV-Caches neu berechnen
+
+
+EVENT_LABELS = {"umzug": "Umzug", "kind": "Geburt eines Kindes", "auto": "Autokauf", "hund": "Hund angeschafft",
+                "heirat": "Heirat", "ebike": "E-Bike gekauft"}
+FEDERAL_STATES = ["Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen",
+                  "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland",
+                  "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen"]
+
+
+def life_events_of(customer_id: str) -> list[dict]:
+    """Gemeldete Lebensereignisse eines Kunden aus life_events.csv, neueste zuerst."""
+    rows = [r for r in _read_csv("life_events.csv") if r["customer_id"] == customer_id]
+    return sorted(({"type": r["event_type"], "label": EVENT_LABELS.get(r["event_type"], r["event_type"]),
+                    "date": date.fromisoformat(r["event_date"])} for r in rows), key=lambda e: e["date"], reverse=True)
+
+
+def add_life_event(customer_id: str, event_type: str, event_date: date) -> None:
+    """Hängt ein Lebensereignis an life_events.csv an (Source of Truth) und leert die Caches."""
+    rows = _read_csv("life_events.csv")
+    next_id = max((int(r["event_id"][1:]) for r in rows if r["event_id"][1:].isdigit()), default=0) + 1
+    rows.append({"event_id": f"E{next_id:04d}", "customer_id": customer_id, "event_type": event_type,
+                 "event_date": event_date.isoformat()})
+    _write_csv("life_events.csv", rows, ["event_id", "customer_id", "event_type", "event_date"])
+    st.cache_data.clear()
+
+
+# ------------------------------------------------------------
+# Meine Region: Kennzahlen aus den Kundendaten der Umgebung
+# ------------------------------------------------------------
+
+LOOKING = {"single", "divorced", "widowed"}
+
+# Demo-Regionsprofile: greifen, wenn in der Umgebung weniger als MIN_SAMPLE echte Kundenprofile liegen.
+# Werte sind Annahmen zur Veranschaulichung (Single-Anteil, Anteil je Altersgruppe, Interessen,
+# Einbruchsindex relativ zum Bundesdurchschnitt: 0.8 = 20 % darunter).
+MIN_SAMPLE = 10
+REGION_PROFILES = {
+    "Erlangen":  {"state": "Bayern", "postal": "91054", "lat": 49.60, "lon": 11.00, "singles": 0.52, "ages": {"20-29": 0.41, "30-39": 0.27, "40-49": 0.14, "50-59": 0.10, "60-69": 0.08},
+                  "interests": ["music", "cycling", "fitness"], "crime_index": 0.78},
+    "Nürnberg":  {"state": "Bayern", "postal": "90402", "lat": 49.45, "lon": 11.08, "singles": 0.44, "ages": {"20-29": 0.26, "30-39": 0.28, "40-49": 0.20, "50-59": 0.14, "60-69": 0.12},
+                  "interests": ["football", "music", "travel"], "crime_index": 1.12},
+    "Fürth":     {"state": "Bayern", "postal": "90762", "lat": 49.48, "lon": 10.99, "singles": 0.38, "ages": {"20-29": 0.22, "30-39": 0.27, "40-49": 0.22, "50-59": 0.16, "60-69": 0.13},
+                  "interests": ["football", "gardening", "cooking"], "crime_index": 0.95},
+    "München":   {"state": "Bayern", "postal": "80331", "lat": 48.14, "lon": 11.58, "singles": 0.47, "ages": {"20-29": 0.24, "30-39": 0.31, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
+                  "interests": ["travel", "fitness", "skiing"], "crime_index": 1.05},
+    "Bayreuth":  {"state": "Bayern", "postal": "95444", "lat": 49.95, "lon": 11.58, "singles": 0.40, "ages": {"20-29": 0.30, "30-39": 0.22, "40-49": 0.18, "50-59": 0.15, "60-69": 0.15},
+                  "interests": ["hiking", "music", "football"], "crime_index": 0.72},
+    "Augsburg":  {"state": "Bayern", "postal": "86150", "lat": 48.37, "lon": 10.90, "singles": 0.36, "ages": {"20-29": 0.21, "30-39": 0.26, "40-49": 0.22, "50-59": 0.17, "60-69": 0.14},
+                  "interests": ["cycling", "cooking", "gardening"], "crime_index": 0.90},
+    "Berlin":    {"state": "Berlin", "postal": "10115", "lat": 52.52, "lon": 13.40, "singles": 0.55, "ages": {"20-29": 0.25, "30-39": 0.30, "40-49": 0.20, "50-59": 0.14, "60-69": 0.11},
+                  "interests": ["art", "music", "travel"], "crime_index": 1.35},
+    "Hamburg":   {"state": "Hamburg", "postal": "20095", "lat": 53.55, "lon": 10.00, "singles": 0.49, "ages": {"20-29": 0.22, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.13},
+                  "interests": ["sailing", "running", "music"], "crime_index": 1.20},
+    "Köln":      {"state": "Nordrhein-Westfalen", "postal": "50667", "lat": 50.94, "lon": 6.96, "singles": 0.48, "ages": {"20-29": 0.23, "30-39": 0.29, "40-49": 0.21, "50-59": 0.15, "60-69": 0.12},
+                  "interests": ["football", "music", "travel"], "crime_index": 1.15},
+}
+
+
+def place_options() -> list[str]:
+    """Orte, die geprüft werden können: Demo-Profile plus alle Wohnorte aus customers.csv."""
+    cities = set(REGION_PROFILES) | {r["residence_city"] for r in _read_csv("customers.csv") if r["residence_city"]}
+    return sorted(cities)
+
+
+def place_profile(city: str, base_profile: dict) -> dict:
+    """Hypothetisches Profil des Kunden an einem anderen Ort (für den Umzugs-Check)."""
+    demo = REGION_PROFILES.get(city)
+    row = next((r for r in _read_csv("customers.csv") if r["residence_city"] == city), {})
+    return {
+        **base_profile,
+        "city": city,
+        "postal_code": demo["postal"] if demo else row.get("postal_code", base_profile["postal_code"]),
+        "federal_state": demo["state"] if demo else row.get("federal_state", base_profile.get("federal_state", "")),
+    }
+
+
+def place_coords(city: str, profile: dict) -> tuple[float, float]:
+    """Koordinaten eines Ortes: Demo-Profil, sonst PLZ-/Bundesland-Näherung."""
+    demo = REGION_PROFILES.get(city)
+    if demo:
+        return demo["lat"], demo["lon"]
+    return home_coords(profile["postal_code"], profile.get("federal_state", ""))
+
+
+def _region_customers(profile: dict) -> tuple[str, list[dict]]:
+    """Feinste Region mit mindestens 10 Kunden: PLZ-Gebiet (erste 2 Ziffern), sonst Bundesland."""
+    rows = _read_csv("customers.csv")
+    prefix = profile["postal_code"][:2]
+    area = [r for r in rows if r["postal_code"][:2] == prefix]
+    if len(area) >= MIN_SAMPLE:
+        cities = sorted({r["residence_city"] for r in area})
+        label = f"PLZ-Gebiet {prefix} ({', '.join(cities[:3])}{' …' if len(cities) > 3 else ''})"
+        return label, area
+    state = profile.get("federal_state", "")
+    return state or "Deutschland", [r for r in rows if r["federal_state"] == state] or rows
+
+
+def region_insights(profile: dict) -> dict:
+    """Aussagen über die Region des Kunden: Sicherheit, Singles, Altersgruppe, Interessen, Naturgefahr.
+
+    Bei weniger als MIN_SAMPLE echten Kundenprofilen in der Umgebung wird das Demo-Regionsprofil
+    der Stadt verwendet (falls vorhanden) und in der Beschriftung ausgewiesen.
+    """
+    label, area = _region_customers(profile)
+    everyone = _read_csv("customers.csv")
+    n, n_all = len(area), len(everyone)
+
+    def share(rows, pred):
+        return sum(1 for r in rows if pred(r)) / max(len(rows), 1)
+
+    my_age = profile.get("age_group") or age_group_for(profile["birth_date"])
+    singles_all = share(everyone, lambda r: r["relationship_status"] in LOOKING)
+    same_age_all = share(everyone, lambda r: r["age_group"] == my_age)
+
+    city = profile.get("city", "")
+    nearby_real = [r for r in everyone if r["residence_city"] == city]
+    demo = REGION_PROFILES.get(city) if len(nearby_real) < MIN_SAMPLE else None
+    if demo:
+        label, n = f"{city} (Demo-Regionsprofil)", len(nearby_real)
+        singles = demo["singles"]
+        same_age = demo["ages"].get(my_age, 0.1)
+        top_interests = [INTERESTS.get(k, k) for k in demo["interests"]]
+    else:
+        singles = share(area, lambda r: r["relationship_status"] in LOOKING)
+        same_age = share(area, lambda r: r["age_group"] == my_age)
+        interests: dict[str, int] = {}
+        for r in area:
+            for i in r["interests"].split(";"):
+                if i:
+                    interests[i] = interests.get(i, 0) + 1
+        top_interests = [INTERESTS.get(k, k) for k, _ in sorted(interests.items(), key=lambda kv: -kv[1])[:3]]
+
+    # Sicherheit: Einbrüche/Diebstähle der letzten 12 Monate je 100 Kunden, Region vs. Deutschland
+    incidents = load_incidents()
+    state = profile.get("federal_state", "")
+    crime_region = crime_all = 0.0
+    if not incidents.empty:
+        recent = incidents[(pd.Timestamp(TODAY) - incidents["incident_date"]).dt.days <= 365]
+        theft = recent[recent["group"] == "Einbruch & Diebstahl"]
+        n_state = sum(1 for r in everyone if r["federal_state"] == state) or 1
+        crime_region = 100 * len(theft[theft["region"] == state]) / n_state
+        crime_all = 100 * len(theft) / max(n_all, 1)
+        if demo:
+            crime_region = crime_all * demo["crime_index"]      # Demo-Index statt dünner Stichprobe
+    disasters = load_disasters()
+    nearby = 0
+    if not disasters.empty:
+        d = disasters[(disasters["country"] == "DE") & disasters["status"].isin(["active", "forecast"])]
+        nearby = int((d["region"] == state).sum())
+    try:
+        import sys as _s
+        if str(ROOT) not in _s.path:
+            _s.path.insert(0, str(ROOT))
+        import forecast as fc
+        trend = fc.trend_label("einbrueche", state) if state in fc.regions() else ""
+    except Exception:  # noqa: BLE001
+        trend = ""
+
+    return {
+        "label": label, "n": n, "state": state, "my_age": my_age,
+        "singles": singles, "singles_all": singles_all,
+        "same_age": same_age, "same_age_all": same_age_all,
+        "top_interests": top_interests,
+        "crime_region": crime_region, "crime_all": crime_all, "crime_trend": trend,
+        "nearby_disasters": nearby,
+    }
 
 
 # ------------------------------------------------------------
@@ -217,8 +393,36 @@ class Policy:
 
 
 # Ausgangsbestand. Bedingungen und Beiträge sind Beispielwerte, keine echten Tarife.
-def initial_policies() -> list[Policy]:
-    """Gibt die fiktiven Verträge des Demokunden zurück."""
+def initial_policies(profile: dict | None = None) -> list[Policy]:
+    """Fiktive Verträge, passend zur Lebenslage: junge Kundinnen und Kunden (Studium, Ausbildung, unter 30)
+    haben nur Hausrat und Haftpflicht, Kfz nur nach gemeldetem Autokauf. Alle anderen den vollen Bestand."""
+    policies = _all_policies()
+    if not profile:
+        return policies
+    young = profile.get("occupation") in ("Student/in", "Auszubildende/r") or (TODAY - profile["birth_date"]).days < 30 * 365
+    if not young:
+        return policies
+    has_car = any(e["type"] == "auto" for e in life_events_of(profile["customer_id"]))
+    keep = {"hausrat", "haftpflicht"} | ({"kfz"} if has_car else set())
+    policies = [p for p in policies if p.id in keep]
+    for p in policies:
+        if p.id == "hausrat":
+            p.policy_number, p.premium_month = "HR-5520-0117", 6.90
+            p.start, p.renewal = date(2025, 9, 1), date(2026, 12, 1)
+            p.coverage = {"Versicherungssumme": "25.000 €", "Selbstbeteiligung": "150 €", "Fahrraddiebstahl": "bis 1.500 €",
+                          "Elementarschäden": "nicht eingeschlossen"}
+            p.documents = ["Versicherungsschein 2025"]
+        elif p.id == "haftpflicht":
+            p.start, p.renewal, p.status, p.review_note = date(2025, 9, 1), date(2027, 9, 1), "active", ""
+        elif p.id == "kfz":
+            p.coverage = {"Fahrzeug": "Kleinwagen, gebraucht", "Umfang": "Haftpflicht + Teilkasko", "SF-Klasse": "SF 1",
+                          "Jährliche Fahrleistung": "8.000 km"}
+            p.premium_month = 48.50
+    return policies
+
+
+def _all_policies() -> list[Policy]:
+    """Vollständiger fiktiver Vertragsbestand."""
     return [
         Policy(
             "hausrat", "Hausratversicherung", "Wohnen", "chair", "review", "HR-4471-2209",
@@ -375,7 +579,7 @@ def initial_notifications(postal_code: str, coords: tuple[float, float]) -> list
         if not recent.empty:
             notes.append({
                 "id": "nbh_incidents", "category": "warning", "date": recent["incident_date"].max().date(),
-                "title": f"{len(recent)} Vorfall/Vorfälle in Ihrer Nachbarschaft",
+                "title": f"{len(recent)} {'Vorfall' if len(recent) == 1 else 'Vorfälle'} in Ihrer Nachbarschaft",
                 "text": "In Ihrem PLZ-Gebiet wurde in den letzten 90 Tagen eingebrochen. Tipps zum Einbruchschutz finden Sie unter Trends.",
                 "page": "trends", "read": False,
             })

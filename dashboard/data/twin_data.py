@@ -49,6 +49,8 @@ PRODUCT_COVERAGE = {
     "Rauchmelder prüfen": "hausrat",
     "Wassersensor anbieten": "hausrat",
     "Hausrat-Summe bald prüfen": "hausrat",
+    "Umzugs-Check": "hausrat",
+    "Einbruchschutz ansprechen": "hausrat",
 }
 PRODUCT_ICONS = {
     "Familienhaftpflicht": "heart",
@@ -57,6 +59,8 @@ PRODUCT_ICONS = {
     "Rauchmelder prüfen": "warning",
     "Wassersensor anbieten": "waves",
     "Hausrat-Summe bald prüfen": "house",
+    "Umzugs-Check": "house",
+    "Einbruchschutz ansprechen": "shield",
 }
 # Sparte: (Bezeichnung, Symbol, Gefahren aus config.toml, Life Events aus config.toml)
 COVERAGES = {
@@ -136,7 +140,7 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
     risks = twin.risks()
     events = twin.predicted_events()
     recommendations = sorted(
-        twin.recommendations(), key=lambda r: (CATEGORIES[r.category].order, r.priority)
+        twin.recommendations(), key=lambda r: (r.priority, CATEGORIES[r.category].order)
     )
     top = recommendations[0] if recommendations else None
     category = top.category if top else "cross_sell"
@@ -196,7 +200,10 @@ def _build_customer(twin_customer: TwinCustomer) -> tuple[tuple, Customer]:
         ),
         next_action=asdict(twin.next_best_action()),
     )
-    sort_key = (CATEGORIES[category].order, rec_priority, -max_risk)
+    # Reihenfolge: Empfehlungspriorität, dann frische Signale (Life Event in den letzten 30 Tagen),
+    # dann Kategorie (Prävention vor Lücke vor Cross-Sell), dann höchstes Risiko.
+    fresh_event = any((TODAY - e.date).days <= 30 for e in twin.customer.life_events)
+    sort_key = (rec_priority, 0 if fresh_event else 1, CATEGORIES[category].order, -max_risk)
     return sort_key, customer
 
 
