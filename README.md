@@ -45,5 +45,25 @@ Faktor < 1 senkt, > 1 erhöht. Was in `when`/`text` erlaubt ist, steht oben in `
 
 Neue Eingabefelder (z. B. Wassersensor): Dataclass in `models.py` erweitern, Loader in `data_loader.py` anpassen, dann in `config.toml` nutzen.
 
+## Demo-Daten erweitern
+
+```powershell
+python generate_demodata.py --target 250 --seed 42
+```
+
+`generate_demodata.py` erzeugt **insgesamt 250 Kunden**, jeweils mit einem Haus und einer variablen Anzahl von Lebensereignissen. Es braucht keine neuen Pakete. Standardausgabe ist der neue Ordner `generated_demodata_250/`; die Originaldateien bleiben unverändert. Ein vorhandener Ausgabeordner wird nicht überschrieben.
+
+Das Skript zieht vorhandene Kunden-/Hausprofile als Vorlagen und variiert Geburtsdatum, Kundeneintritt, Baujahr und Ereignisse. Ort, PLZ und Bundesland bleiben zusammen; Altersgruppe, Beruf und Finanzsituation werden gemeinsam übernommen. Baujahre und Eintrittsdaten erhalten begrenztes Gauß-Rauschen, keine geografische Noise-Map. Bestehende Zeilen bleiben einschließlich möglicher Unstimmigkeiten erhalten. Gleiche Eingaben, gleicher Seed und gleicher Stichtag ergeben dieselben CSV-Inhalte.
+
+```powershell
+python generate_demodata.py --target 500 --seed 7 --output generated_demodata_500
+```
+
+`--source` wählt den Quellordner. `--as-of YYYY-MM-DD` setzt den Stichtag; Standard ist der Twin-Stichtag aus `models.TODAY` (aktuell 2026-10-23), nicht das Systemdatum. Ein anderer Stichtag stellt die Twin-Engine nicht automatisch um.
+
+Der Dashboard-Bestand bleibt unverändert, bis die drei erzeugten CSVs nach einer Sicherung in `generated_demodata/` übernommen werden. Einzelne Kunden können mit `load_customer(..., folder=...)` aus der Ausgabe geladen werden; die bestehende Twin-Ähnlichkeitssuche verwendet jedoch weiterhin den Standardordner.
+
+Zusätzliche Quelldateien wie `incidents.csv` werden unverändert kopiert, nicht hochgerechnet. Die Daten eignen sich für UI-Demos und Tests, nicht als repräsentative Bevölkerung oder zum Validieren von Risikoprognosen. Eine räumliche Noise-Map wäre erst für gezielt simulierte regionale Risikofelder sinnvoll.
+
 ## Nicht im Scope
 Kein ML, kein LLM in der Entscheidung. Faktoren sind geschätzt, nicht kalibriert.

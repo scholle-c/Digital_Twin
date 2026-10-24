@@ -12,6 +12,13 @@
 #   risk("feuer")             -> p_12m der Gefahr
 #   event_p("umzug")          -> p_12m des Life Events
 #   drivers("feuer")          -> Liste der Treiber-Namen
+#   last_claim("rejected")    -> jüngster Schadenfall mit Status (rejected/in_review/settled) oder None
+#   claim_days("rejected")    -> Tage seit diesem Schadenfall oder None
+#   claim_label(claim)        -> deutscher Name des Schadentyps
+#   similar_p("kind")         -> p_12m aus ähnlichen Kunden (similarity.py)
+#   similar_ids("kind")       -> IDs der ähnlichen Kunden, die das Event hatten
+#   trend("einbrueche")       -> regionaler Trend in %/Jahr (forecast.py), Region = Bundesland
+#   trend_label("einbrueche") -> "steigend (+11 %/Jahr)"
 # In "text" gilt dasselbe, in geschweiften Klammern.
 # ============================================================
 
@@ -37,6 +44,15 @@ factors = [
   { name = "Keller",      when = "house.basement",      factor = 1.5 },
 ]
 
+[hazards.einbruch]
+label = "Einbruch"
+base_per_month = 0.002
+avg_damage_eur = 3500
+factors = [
+  { name = "Erdgeschoss / wenige Stockwerke", when = "house.floors <= 2",   factor = 1.5 },
+  { name = "Regionaler Einbruchtrend steigend", when = "trend('einbrueche') > 10", factor = 1.4 },
+]
+
 [hazards.leitungswasser]
 label = "Leitungswasser"
 base_per_month = 0.003
@@ -60,6 +76,7 @@ factors = [
 label = "Kind"
 base_per_month = 0.01
 factors = [
+  { name = "Ähnliche Kunden hatten Kind", when = "similar_p('kind') >= 0.5",                             factor = 1.8 },
   { name = "Alter 25-38",       when = "25 <= person.age <= 38",                                        factor = 2.0 },
   { name = "Kind < 6 Monate",   when = "days_since('kind') is not None and days_since('kind') < 180",   factor = 0.1 },
 ]
@@ -74,7 +91,21 @@ factors = [
 ]
 
 # ---------- EMPFEHLUNGEN: Regel -> Produkt + Text ----------
-# category: prevention (Schaden verhindern) > gap (Deckungslücke) > cross_sell
+# category: retention (Kundenbindung) > prevention (Schaden verhindern) > gap (Deckungslücke) > cross_sell
+[[recommendations]]
+product  = "Abgelehnten Schadenfall nachfassen"
+category = "retention"
+priority = 1
+when = "claim_days('rejected') is not None and claim_days('rejected') < 180"
+text = "{claim_label(last_claim('rejected'))} am {last_claim('rejected').date:%d.%m.%Y} über {last_claim('rejected').damage_eur:.0f} € abgelehnt: Entscheidung erklären, Alternative anbieten, Kündigungsrisiko senken"
+
+[[recommendations]]
+product  = "Fahrradbaustein"
+category = "cross_sell"
+priority = 1
+when = "last_claim('rejected') is not None and last_claim('rejected').type == 'bicycle_theft' and not has('fahrrad_baustein')"
+text = "Fahrraddiebstahl war nicht gedeckt: Fahrradbaustein zur Hausrat schließt die Lücke für das nächste Rad"
+
 [[recommendations]]
 product  = "Familienhaftpflicht"
 category = "cross_sell"
@@ -111,8 +142,22 @@ when = "risk('leitungswasser') > 0.08 and not has('wassersensor')"
 text = "Leitungswasserrisiko {risk('leitungswasser'):.0%}, Treiber: {', '.join(drivers('leitungswasser'))}"
 
 [[recommendations]]
+product  = "Umzugs-Check"
+category = "gap"
+priority = 1
+when = "days_since('umzug') is not None and days_since('umzug') < 120"
+text = "Umzug vor {days_since('umzug')} Tagen gemeldet: Versicherungssumme, Gefährdungszone und Elementarschutz für die neue Adresse prüfen"
+
+[[recommendations]]
 product  = "Hausrat-Summe bald prüfen"
 category = "gap"
 priority = 3
 when = "event_p('umzug') > 0.3"
 text = "Umzug zu {event_p('umzug'):.0%} wahrscheinlich"
+
+[[recommendations]]
+product  = "Einbruchschutz ansprechen"
+category = "prevention"
+priority = 2
+when = "trend('einbrueche') > 10 and risk('einbruch') > 0.03"
+text = "Einbrüche in {person.federal_state} {trend_label('einbrueche')}, Einbruchrisiko {risk('einbruch'):.0%}"

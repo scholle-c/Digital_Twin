@@ -1,0 +1,14 @@
+# Helles Design erzwingen (keine dunkle Ansicht) und Grundfarben passend zum CSS.
+[theme]
+base = "light"
+primaryColor = "#003781"
+backgroundColor = "#F5F7FB"
+secondaryBackgroundColor = "#EEF3F9"
+textColor = "#1E293B"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

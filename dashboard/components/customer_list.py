@@ -19,9 +19,13 @@ from state import select_customer
 def render_customer_list(customers: list[Customer], selected_id: str) -> None:
     """Zeigt die bereits sortierte Kundenliste und markiert den ausgewählten Kunden."""
     with st.container(key="panel_list"):
-        render_html(f'<div class="c360-panel-title" role="heading" aria-level="2">{t("prioritized_customers")}</div>')
-        for rank, customer in enumerate(customers, start=1):
-            render_customer_card(customer, rank, customer.id == selected_id)
+        render_html(
+            f'<div class="c360-panel-title c360-list-heading" role="heading" aria-level="2">'
+            f'{t("prioritized_customers")}<span class="c360-count">{len(customers)}</span></div>'
+        )
+        with st.container(key="customer_queue"):
+            for rank, customer in enumerate(customers, start=1):
+                render_customer_card(customer, rank, customer.id == selected_id)
 
 
 # Eine einzelne, anklickbare Kundenkarte mit Rang, Kategorie, Frist und Begründung.
@@ -35,7 +39,7 @@ def render_customer_card(customer: Customer, rank: int, is_selected: bool) -> No
             <div class="c360-cust-card {category_class(customer.category)}{selected_class}">
                 <div class="c360-cust-top">
                     <span class="c360-rank" aria-label="{t("rank", n=rank)}">{rank}</span>
-                    <span class="c360-cust-name">{esc(customer.name)}</span>
+                    <span class="c360-cust-name">{esc(customer.name)}<small class="c360-customer-id">{esc(customer.id)}</small></span>
                     {icon("chevron_right", "c360-icon c360-chevron")}
                 </div>
                 <div class="c360-cust-body">

@@ -1,0 +1,63 @@
+incident_id,incident_type,incident_date,time_of_day,country,region,city,postal_code,latitude,longitude,location_type,damage_eur,severity_level,police_reported,customer_id,claim_status,source
+I0001,burglary,2025-11-14,evening,DE,Bayern,Bayreuth,95444,49.9440,11.5780,apartment,6800,3,True,C0003,settled,synthetic
+I0002,bicycle_theft,2026-09-30,night,DE,Bayern,Bayreuth,95447,49.9310,11.5890,street,1900,2,True,,,synthetic
+I0003,water_damage,2026-02-03,morning,DE,Bayern,Bayreuth,95445,49.9560,11.5560,basement,12400,3,False,C0012,settled,synthetic
+I0004,burglary,2026-01-22,afternoon,DE,Bayern,Nürnberg,90419,49.4620,11.0640,house,9400,3,True,C0013,settled,synthetic
+I0005,attempted_burglary,2026-03-05,night,DE,Bayern,Nürnberg,90419,49.4635,11.0612,house,1200,2,True,,,synthetic
+I0006,burglary,2026-08-28,afternoon,DE,Bayern,Nürnberg,90478,49.4440,11.1000,apartment,4300,2,True,,,synthetic
+I0007,vehicle_theft,2025-10-09,night,DE,Bayern,Nürnberg,90402,49.4510,11.0780,street,27500,4,True,C0009,settled,synthetic
+I0008,vandalism,2026-10-12,night,DE,Bayern,Nürnberg,90402,49.4498,11.0760,public_space,650,1,True,,,synthetic
+I0009,bicycle_theft,2026-07-15,evening,DE,Bayern,Erlangen,91054,49.5960,11.0040,street,3200,2,True,C0021,rejected,synthetic
+I0010,bicycle_theft,2026-09-02,afternoon,DE,Bayern,Erlangen,91052,49.5980,11.0080,public_space,2800,2,True,,,synthetic
+I0011,bicycle_theft,2026-10-06,night,DE,Bayern,Erlangen,91054,49.6010,11.0120,basement,4100,2,True,,,synthetic
+I0012,theft,2026-05-20,afternoon,DE,Bayern,Erlangen,91052,49.5895,11.0110,vehicle,950,1,True,,,synthetic
+I0013,fire,2025-12-24,evening,DE,Bayern,Bamberg,96047,49.8920,10.8880,apartment,38500,4,True,C0014,settled,synthetic
+I0014,lightning_surge,2026-06-27,evening,DE,Bayern,Bamberg,96050,49.8800,10.9200,house,1600,2,False,C0015,settled,synthetic
+I0015,burglary,2026-04-11,afternoon,DE,Bayern,München,81541,48.1180,11.5990,apartment,14200,3,True,C0024,settled,synthetic
+I0016,bicycle_theft,2026-08-03,night,DE,Bayern,München,80469,48.1300,11.5730,street,2400,2,True,,,synthetic
+I0017,cyber_fraud,2026-09-18,afternoon,DE,Bayern,München,80331,48.1370,11.5750,online,2750,2,True,C0038,in_review,synthetic
+I0018,glass_breakage,2026-10-19,morning,DE,Bayern,München,80331,48.1390,11.5800,apartment,420,1,False,C0041,reported,synthetic
+I0019,vehicle_theft,2025-06-14,night,DE,Bayern,München,81541,48.1150,11.6020,street,31800,4,True,,,synthetic
+I0020,water_damage,2026-01-08,morning,DE,Bayern,Augsburg,86150,48.3660,10.8950,basement,21800,4,False,C0017,settled,synthetic
+I0021,attempted_burglary,2025-11-29,evening,DE,Bayern,Augsburg,86150,48.3690,10.8990,house,900,1,True,,,synthetic
+I0022,fire,2026-03-28,night,DE,Bayern,Regensburg,93047,49.0160,12.0950,garage,16500,3,True,,,synthetic
+I0023,theft,2026-06-09,afternoon,DE,Bayern,Regensburg,93047,49.0190,12.0990,garden_shed,780,1,True,C0019,settled,synthetic
+I0024,burglary,2026-10-20,evening,DE,Bayern,Würzburg,97070,49.7930,9.9310,house,7900,3,True,C0028,reported,synthetic
+I0025,vandalism,2026-07-04,night,DE,Bayern,Würzburg,97070,49.7910,9.9280,vehicle,1400,2,True,,,synthetic
+I0026,burglary,2025-12-02,afternoon,DE,Berlin,Berlin,10245,52.5070,13.4580,apartment,8600,3,True,C0033,settled,synthetic
+I0027,bicycle_theft,2026-05-27,night,DE,Berlin,Berlin,10245,52.5090,13.4610,street,1300,2,True,,,synthetic
+I0028,vehicle_theft,2026-02-15,night,DE,Berlin,Berlin,12043,52.4810,13.4350,street,22400,4,True,,,synthetic
+I0029,vandalism,2026-01-01,night,DE,Berlin,Berlin,10115,52.5320,13.3850,vehicle,2900,2,True,C0036,settled,synthetic
+I0030,fire,2026-01-01,night,DE,Berlin,Berlin,12043,52.4790,13.4380,apartment,5200,3,True,,,synthetic
+I0031,cyber_fraud,2026-04-23,evening,DE,Berlin,Berlin,10115,52.5300,13.3880,online,5900,3,True,,,synthetic
+I0032,burglary,2026-03-14,afternoon,DE,Hamburg,Hamburg,22767,53.5500,9.9350,apartment,11300,3,True,C0044,settled,synthetic
+I0033,water_damage,2025-09-19,morning,DE,Hamburg,Hamburg,20095,53.5510,10.0010,apartment,6400,3,False,,,synthetic
+I0034,bicycle_theft,2026-06-30,evening,DE,Hamburg,Hamburg,22767,53.5520,9.9400,street,850,1,True,,,synthetic
+I0035,burglary,2026-02-27,evening,DE,Nordrhein-Westfalen,Köln,50823,50.9560,6.9300,house,5700,3,True,C0040,settled,synthetic
+I0036,fire,2025-08-30,afternoon,DE,Nordrhein-Westfalen,Köln,50667,50.9380,6.9580,house,142000,5,True,C0045,settled,synthetic
+I0037,vehicle_theft,2026-07-21,night,DE,Nordrhein-Westfalen,Köln,50823,50.9580,6.9270,street,18900,3,True,,,synthetic
+I0038,glass_breakage,2026-03-02,afternoon,DE,Nordrhein-Westfalen,Köln,50667,50.9400,6.9550,house,780,1,False,,,synthetic
+I0039,attempted_burglary,2026-09-09,afternoon,DE,Hessen,Frankfurt am Main,60385,50.1290,8.7090,apartment,1800,2,True,C0047,in_review,synthetic
+I0040,theft,2026-08-15,afternoon,DE,Hessen,Frankfurt am Main,60311,50.1100,8.6830,public_space,1250,2,True,,,synthetic
+I0041,lightning_surge,2026-07-31,evening,DE,Hessen,Frankfurt am Main,60385,50.1270,8.7110,house,2900,2,False,C0049,settled,synthetic
+I0042,burglary,2026-05-05,afternoon,DE,Baden-Württemberg,Stuttgart,70173,48.7760,9.1790,house,18700,3,True,C0023,settled,synthetic
+I0043,water_damage,2026-10-14,morning,DE,Baden-Württemberg,Stuttgart,70173,48.7740,9.1820,basement,9800,3,False,C0039,reported,synthetic
+I0044,bicycle_theft,2026-04-17,afternoon,DE,Sachsen,Leipzig,04109,51.3400,12.3740,public_space,2100,2,True,,,synthetic
+I0045,fire,2026-09-25,evening,DE,Sachsen,Leipzig,04109,51.3420,12.3770,apartment,24600,4,True,C0050,in_review,synthetic
+I0046,burglary,2025-07-30,night,DE,Sachsen,Leipzig,04109,51.3380,12.3720,basement,2600,2,True,,,synthetic
+I0047,water_damage,2025-12-17,night,DE,Sachsen,Dresden,01067,51.0510,13.7320,apartment,3700,2,False,C0008,settled,synthetic
+I0048,vandalism,2026-08-08,night,DE,Sachsen,Dresden,01067,51.0490,13.7360,public_space,3400,2,True,,,synthetic
+I0049,burglary,2026-01-30,evening,DE,Niedersachsen,Hannover,30159,52.3750,9.7350,house,6200,3,True,C0046,settled,synthetic
+I0050,vehicle_theft,2025-11-04,night,DE,Niedersachsen,Hannover,30159,52.3770,9.7380,street,41500,4,True,C0020,settled,synthetic
+I0051,cyber_fraud,2026-10-21,evening,DE,Nordrhein-Westfalen,Düsseldorf,40210,51.2210,6.7840,online,1450,2,True,C0034,reported,synthetic
+I0052,glass_breakage,2026-05-12,morning,DE,Nordrhein-Westfalen,Düsseldorf,40210,51.2190,6.7870,apartment,290,1,False,,,synthetic
+I0053,fire,2026-02-19,night,DE,Nordrhein-Westfalen,Dortmund,44137,51.5130,7.4620,garage,9300,3,True,C0018,settled,synthetic
+I0054,attempted_burglary,2026-06-16,night,DE,Nordrhein-Westfalen,Dortmund,44137,51.5150,7.4650,house,1100,2,True,,,synthetic
+I0055,burglary,2026-07-08,afternoon,DE,Bremen,Bremen,28195,53.0790,8.8030,apartment,3900,2,True,,,synthetic
+I0056,lightning_surge,2026-08-22,evening,DE,Bremen,Bremen,28195,53.0770,8.8060,house,870,1,False,C0031,settled,synthetic
+I0057,bicycle_theft,2026-10-02,evening,DE,Baden-Württemberg,Freiburg im Breisgau,79098,47.9960,7.8490,street,3600,2,True,C0016,in_review,synthetic
+I0058,theft,2026-04-04,night,DE,Baden-Württemberg,Freiburg im Breisgau,79098,47.9970,7.8520,vehicle,1700,2,True,,,synthetic
+I0059,water_damage,2026-03-19,afternoon,DE,Baden-Württemberg,Mannheim,68159,49.4880,8.4660,apartment,15600,3,False,C0030,settled,synthetic
+I0060,vandalism,2026-09-27,night,DE,Baden-Württemberg,Mannheim,68159,49.4900,8.4690,house,1150,2,True,,,synthetic
+I0061,burglary,2026-10-17,night,DE,Schleswig-Holstein,Kiel,24103,54.3230,10.1340,house,4800,2,True,C0037,reported,synthetic
+I0062,fire,2025-10-26,evening,DE,Schleswig-Holstein,Kiel,24103,54.3250,10.1300,garden_shed,2300,2,True,,,synthetic

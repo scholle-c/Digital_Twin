@@ -140,7 +140,7 @@ class Customer:
     id: str
     name: str
     salutation: str
-    age: int
+    age: int | str
     city: str
     housing: str
     priority: int
@@ -160,6 +160,8 @@ class Customer:
     conversation_opening: str
     conversation_questions: list[str]
     conversation_goal: str
+    # Handlungsempfehlung aus dem Digital Twin (NextBestAction als Dict) – None bei Mockdaten.
+    next_action: dict | None = None
 
 
 # ============================================================
@@ -169,6 +171,7 @@ class Customer:
 # Kategorien in fachlicher Reihenfolge: 1 = Prävention, 2 = Deckungslücke, 3 = Cross-Sell.
 # Die Schlüssel entsprechen den Kategorien aus ../interface.py (prevention, gap, cross_sell).
 CATEGORIES: dict[str, Category] = {
+    "retention": Category("retention", "KUNDENBINDUNG", 0, "Vertrauen erhalten"),
     "prevention": Category("prevention", "PRÄVENTION", 1, "Schäden verhindern"),
     "gap": Category("gap", "DECKUNGSLÜCKE", 2, "Deckungslücken schließen"),
     "cross_sell": Category("cross_sell", "CROSS-SELL", 3, "Passende Ergänzungen anbieten"),

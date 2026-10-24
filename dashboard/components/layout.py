@@ -10,6 +10,8 @@ from pathlib import Path
 import streamlit as st
 
 from components.ui import esc, icon, render_html
+from components.ai import ai_available, chat_answer
+from data.twin_data import get_customer
 from i18n import t
 from state import toggle_language
 
@@ -31,6 +33,21 @@ NAV_ITEMS = [
 ]
 
 
+# Wort-Bild-Marke wie im Kundenportal (kein offizielles Allianz-Logo).
+def logo_html() -> str:
+    """Gibt die Marke „Allianz Digital Twin“ mit Untertitel für das Beratercockpit zurück."""
+    mark = (
+        '<svg class="c360-logo-mark" viewBox="0 0 40 40" aria-hidden="true">'
+        '<rect width="40" height="40" rx="11" fill="#003781"/>'
+        '<circle cx="16" cy="20" r="8.5" fill="none" stroke="#fff" stroke-width="3"/>'
+        '<circle cx="24" cy="20" r="8.5" fill="none" stroke="#7FC4FD" stroke-width="3"/></svg>'
+    )
+    return (
+        f'<div class="c360-logo">{mark}<div><span class="c360-logo-word">Allianz <b>Digital Twin</b></span>'
+        f'<span class="c360-logo-sub">{t("logo_sub")}</span></div></div>'
+    )
+
+
 # Zeichnet die schmale Navigation in der Streamlit-Sidebar, hebt den aktiven Bereich
 # hervor und zeigt darunter den Sprachumschalter Deutsch/Englisch.
 def render_sidebar(active: str = "nav_overview") -> None:
@@ -40,6 +57,7 @@ def render_sidebar(active: str = "nav_overview") -> None:
         state = ' is-active" aria-current="page' if label_key == active else ""
         items += f'<div class="c360-nav-item{state}">{icon(icon_name)}<span>{t(label_key)}</span></div>'
     with st.sidebar:
+        render_html(logo_html())
         render_html(f'<nav class="c360-nav" aria-label="{t("nav_aria")}">{items}</nav>')
         # Der Button zeigt immer die Zielsprache an, z. B. „English“, solange Deutsch aktiv ist.
         st.button(
@@ -49,6 +67,42 @@ def render_sidebar(active: str = "nav_overview") -> None:
             help=t("lang_switch_help"),
             on_click=toggle_language,
         )
+        render_chat()
+    with st.container(key="mobile_header"):
+        brand, language = st.columns([4, 1], vertical_alignment="center")
+        with brand:
+            render_html(logo_html())
+        with language:
+            st.button(
+                t("lang_switch"), key="mobile_lang_toggle", icon=":material/translate:",
+                help=t("lang_switch_help"), on_click=toggle_language,
+            )
+
+
+# Kleiner Chat zum ausgewählten Kunden in der Sidebar. Verlauf je Kunde in st.session_state.chat.
+def render_chat() -> None:
+    """Fragen an den Digital Twin des ausgewählten Kunden, beantwortet von Claude über chat.py."""
+    customer_id = st.session_state.get("selected_customer_id")
+    if not customer_id:
+        return
+    customer = get_customer(customer_id)
+    st.markdown(f"**{t('chat_title', name=customer.name if customer else t('not_specified'))}**")
+    st.caption(customer_id)
+    if not ai_available():
+        st.caption(t("ai_no_key"))
+        return
+    history = st.session_state.setdefault("chat", {}).setdefault(customer_id, [])
+    with st.container(height=260, key="chat_log"):
+        if not history:
+            st.caption(t("chat_hint"))
+        for message in history[-8:]:
+            with st.chat_message("user" if message["role"] == "user" else "assistant"):
+                st.markdown(message["content"])
+    prompt = st.chat_input(t("chat_placeholder"), key="chat_input")
+    if prompt:
+        with st.spinner(t("chat_thinking")):
+            chat_answer(customer_id, prompt, history)   # schreibt Frage und Antwort in history
+        st.rerun()
 
 
 # Wählt die Begrüßung passend zur Tageszeit.
@@ -67,14 +121,19 @@ def render_header(advisor: dict[str, str], open_customers: int) -> None:
     """Rendert die Begrüßung des Beraters sowie Benachrichtigungs- und Benutzerbereich."""
     name = esc(advisor["first_name"])
     subline = t("subline_one") if open_customers == 1 else t("subline_many", n=open_customers)
+    with st.container(key="advisor_topbar"):
+        render_html(
+            f'<div class="c360-advisor-topbar"><span class="c360-workspace-label">'
+            f'{esc(t("workspace_label"))}</span>{header_actions_html(advisor)}</div>'
+        )
     render_html(
         f"""
         <div class="c360-header">
+            <span class="c360-page-icon">{icon("users")}</span>
             <div>
                 <div class="c360-greeting" role="heading" aria-level="1">{_greeting()}, {name}</div>
                 <div class="c360-subline">{subline}</div>
             </div>
-            {header_actions_html(advisor)}
         </div>
         """
     )
@@ -82,13 +141,10 @@ def render_header(advisor: dict[str, str], open_customers: int) -> None:
 
 # Benachrichtigungen und Benutzerbereich oben rechts; wird von Übersicht und Detailseite genutzt.
 def header_actions_html(advisor: dict[str, str]) -> str:
-    """Gibt das HTML für Glocke und Benutzermenü zurück."""
-    notifications = t("notifications")
+    """Gibt die Beraterkennung im Kopfbereich zurück."""
     return (
         f'<div class="c360-header-actions">'
-        f'<span class="c360-icon-btn" title="{notifications}" aria-label="{notifications}">{icon("bell")}</span>'
-        f'<span class="c360-vdivider"></span>'
         f'<span class="c360-user"><span class="c360-user-avatar">{icon("user")}</span>'
-        f'<span>{esc(advisor["first_name"])}</span>{icon("chevron_down", "c360-icon c360-icon-sm")}</span>'
+        f'<span>{esc(advisor["first_name"])}<small>{t("advisor_role")}</small></span></span>'
         f"</div>"
     )
