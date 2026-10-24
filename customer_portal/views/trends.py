@@ -12,10 +12,10 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from core.data import TODAY, home_coords, load_age_group_claims, load_disasters, load_incidents
+from core.data import TODAY, home_coords, load_age_group_claims, load_disasters, load_incidents, region_insights
 from core.twin import load_forecast
 from geo_heatmap import render_heatmap
-from ui.components import empty_state, esc, euro, icon, page_header, render_html
+from ui.components import badge, empty_state, esc, euro, icon, page_header, render_html
 
 # Feste Farbe je Risikokategorie (Farbe folgt der Kategorie, nicht dem Rang). Geprüfte Reihenfolge.
 GROUP_COLORS = {
@@ -40,6 +40,8 @@ def render(ctx: dict) -> None:
         f'<div class="dt-callout dt-callout-warn">{icon("science", "ms-sm")}<span><b>Beispieldaten:</b> Alle Werte stammen '
         f"aus synthetischen Testdaten des Projekts. Es handelt sich nicht um offizielle oder geprüfte Allianz-Daten.</span></div>"
     )
+    _my_region(ctx["profile"])
+
     with st.spinner("Analysedaten werden geladen …"):
         incidents, disasters = load_incidents(), load_disasters()
     if incidents.empty:
@@ -83,6 +85,70 @@ def render(ctx: dict) -> None:
         _demographics()
     with twin_col, st.container(key="tr_twin"):
         _personal_risk(ctx)
+
+
+# „Meine Region“: verständliche Aussagen über die Umgebung des Kunden, aus den Kundendaten abgeleitet.
+def _my_region(profile: dict) -> None:
+    """Zeigt Karten wie „Ihre Gegend ist sicher“ oder „Viele Menschen in Ihrem Alter“."""
+    r = region_insights(profile)
+    render_html(f'<h3 class="dt-h3">Meine Region: {esc(r["label"])}</h3>'
+                f'<p class="dt-tiny">Abgeleitet aus {r["n"]} anonymisierten Kundenprofilen in Ihrer Umgebung und den regionalen Vorfalldaten.</p>')
+    cards = []
+
+    # 1. Sicherheit
+    if r["crime_all"] > 0:
+        diff = (r["crime_region"] - r["crime_all"]) / r["crime_all"]
+        if diff <= -0.15:
+            head, tone = "Ihre Gegend ist sicher", "ok"
+            text = f"Einbrüche und Diebstähle liegen hier {abs(diff):.0%} unter dem Bundesdurchschnitt."
+        elif diff >= 0.15:
+            head, tone = "Hier lohnt sich Einbruchschutz", "warn"
+            text = f"Einbrüche und Diebstähle liegen hier {diff:.0%} über dem Bundesdurchschnitt."
+        else:
+            head, tone = "Durchschnittlich sichere Gegend", "info"
+            text = "Einbrüche und Diebstähle liegen im Bundesdurchschnitt."
+        if r["crime_trend"] and r["label"] == r["state"]:     # Trend gibt es nur je Bundesland
+            text += f" Trend: {r['crime_trend']}."
+        cards.append(("shield", head, text, tone, min(r["crime_region"] / max(r["crime_all"] * 2, 0.01), 1.0), "Vorfälle je 100 Kunden, relativ zum Bundesdurchschnitt"))
+
+    # 2. Singles
+    if r["singles"] >= 0.3:
+        head = "Viele Singles in Ihrer Nähe"
+    elif r["singles"] >= r["singles_all"]:
+        head = "Etwas mehr Singles als im Schnitt"
+    else:
+        head = "Eher Paare und Familien"
+    cards.append(("favorite", head, f"{r['singles']:.0%} der Menschen in Ihrer Region sind ledig, geschieden oder verwitwet "
+                  f"(Deutschland: {r['singles_all']:.0%}).", "info", r["singles"], "Anteil Singles"))
+
+    # 3. Altersgruppe
+    head = "Viele Menschen in Ihrem Alter" if r["same_age"] >= max(0.25, r["same_age_all"]) else "Gemischte Altersstruktur"
+    cards.append(("groups", head, f"{r['same_age']:.0%} sind wie Sie zwischen {r['my_age'].replace('-', ' und ')} Jahre alt "
+                  f"(Deutschland: {r['same_age_all']:.0%}).", "info", r["same_age"], f"Anteil Altersgruppe {r['my_age']}"))
+
+    # 4. Interessen
+    if r["top_interests"]:
+        cards.append(("interests", "Das bewegt Ihre Nachbarschaft", "Häufigste Interessen: " + ", ".join(r["top_interests"]) + ".",
+                      "info", None, ""))
+
+    # 5. Naturgefahren
+    if r["nearby_disasters"]:
+        n_ev = r["nearby_disasters"]
+        cards.append(("flood", "Naturereignis in Ihrer Nähe",
+                      f"{n_ev} aktive{'s' if n_ev == 1 else ''} oder erwartete{'s' if n_ev == 1 else ''} Ereignis{'' if n_ev == 1 else 'se'} in {r['state']}. "
+                      "Details auf der Karte unten.", "warn", None, ""))
+    else:
+        cards.append(("sunny", "Aktuell keine Unwetterwarnung", f"In {r['state'] or 'Ihrer Region'} ist derzeit kein Naturereignis gemeldet.",
+                      "ok", None, ""))
+
+    cols = st.columns(2, gap="medium")
+    for i, (ic, head, text, tone, value, caption) in enumerate(cards):
+        with cols[i % 2], st.container(border=True):
+            render_html(f'<div class="dt-card-head"><div><h4 class="dt-h4" style="margin:0">{icon(ic, "ms-sm")} {esc(head)}</h4></div>{badge({"ok": "Gut", "warn": "Beachten", "info": "Info"}[tone], tone)}</div>'
+                        f'<p style="margin:6px 0 2px">{esc(text)}</p>')
+            if value is not None:
+                st.progress(float(max(0.0, min(value, 1.0))), text=caption)
+    st.divider()
 
 
 # Vier Kennzahlen mit Tooltips zur Erklärung.

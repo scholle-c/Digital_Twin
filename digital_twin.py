@@ -90,8 +90,10 @@ class DigitalTwin:
         Konfidenz: Fakt (gemeldetes Life Event) hoch, Risikoscore mittel, reine Prognose aus ähnlichen Kunden niedrig.
         Ohne ausreichende Evidenz ist das Ergebnis bewusst "keine Aktion".
         """
+        # Priorität zuerst (ein gemeldetes Life Event mit Prio 1 schlägt eine allgemeine Prävention mit Prio 2),
+        # bei gleicher Priorität Prävention vor Lücke vor Cross-Sell.
         order = {"prevention": 0, "gap": 1, "cross_sell": 2}
-        recs = sorted(self.recommendations(), key=lambda r: (order.get(r.category, 9), r.priority))
+        recs = sorted(self.recommendations(), key=lambda r: (r.priority, order.get(r.category, 9)))
         similar = self.similar_events()
         trends = self.regional_trends()
         if not recs:

@@ -178,6 +178,8 @@ def save_profile_to_csv(profile: dict) -> None:
                 row["age_group"] = age_group_for(profile["birth_date"])
                 row["postal_code"] = profile["postal_code"]
                 row["residence_city"] = profile["city"]
+                if profile.get("federal_state"):
+                    row["federal_state"] = profile["federal_state"]
                 row["relationship_status"] = RELATIONSHIP_CODES.get(profile["relationship_status"], row["relationship_status"])
                 row["occupation"] = OCCUPATION_CODES.get(profile["occupation"], row["occupation"])
                 row["interests"] = ";".join(INTEREST_CODES.get(i, i) for i in profile["interests"])
@@ -190,6 +192,105 @@ def save_profile_to_csv(profile: dict) -> None:
     extra_rows.sort(key=lambda r: r["customer_id"])
     _write_csv("portal_profiles.csv", extra_rows, ["customer_id", *PORTAL_FIELDS])
     st.cache_data.clear()   # Twin-Ergebnisse und CSV-Caches neu berechnen
+
+
+EVENT_LABELS = {"umzug": "Umzug", "kind": "Geburt eines Kindes", "auto": "Autokauf", "hund": "Hund angeschafft",
+                "heirat": "Heirat", "ebike": "E-Bike gekauft"}
+FEDERAL_STATES = ["Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen",
+                  "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland",
+                  "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen"]
+
+
+def life_events_of(customer_id: str) -> list[dict]:
+    """Gemeldete Lebensereignisse eines Kunden aus life_events.csv, neueste zuerst."""
+    rows = [r for r in _read_csv("life_events.csv") if r["customer_id"] == customer_id]
+    return sorted(({"type": r["event_type"], "label": EVENT_LABELS.get(r["event_type"], r["event_type"]),
+                    "date": date.fromisoformat(r["event_date"])} for r in rows), key=lambda e: e["date"], reverse=True)
+
+
+def add_life_event(customer_id: str, event_type: str, event_date: date) -> None:
+    """Hängt ein Lebensereignis an life_events.csv an (Source of Truth) und leert die Caches."""
+    rows = _read_csv("life_events.csv")
+    next_id = max((int(r["event_id"][1:]) for r in rows if r["event_id"][1:].isdigit()), default=0) + 1
+    rows.append({"event_id": f"E{next_id:04d}", "customer_id": customer_id, "event_type": event_type,
+                 "event_date": event_date.isoformat()})
+    _write_csv("life_events.csv", rows, ["event_id", "customer_id", "event_type", "event_date"])
+    st.cache_data.clear()
+
+
+# ------------------------------------------------------------
+# Meine Region: Kennzahlen aus den Kundendaten der Umgebung
+# ------------------------------------------------------------
+
+LOOKING = {"single", "divorced", "widowed"}
+
+
+def _region_customers(profile: dict) -> tuple[str, list[dict]]:
+    """Feinste Region mit mindestens 10 Kunden: PLZ-Gebiet (erste 2 Ziffern), sonst Bundesland."""
+    rows = _read_csv("customers.csv")
+    prefix = profile["postal_code"][:2]
+    area = [r for r in rows if r["postal_code"][:2] == prefix]
+    if len(area) >= 10:
+        cities = sorted({r["residence_city"] for r in area})
+        label = f"PLZ-Gebiet {prefix} ({', '.join(cities[:3])}{' …' if len(cities) > 3 else ''})"
+        return label, area
+    state = profile.get("federal_state", "")
+    return state or "Deutschland", [r for r in rows if r["federal_state"] == state] or rows
+
+
+def region_insights(profile: dict) -> dict:
+    """Aussagen über die Region des Kunden: Sicherheit, Singles, Altersgruppe, Interessen, Naturgefahr."""
+    label, area = _region_customers(profile)
+    everyone = _read_csv("customers.csv")
+    n, n_all = len(area), len(everyone)
+
+    def share(rows, pred):
+        return sum(1 for r in rows if pred(r)) / max(len(rows), 1)
+
+    my_age = profile.get("age_group") or age_group_for(profile["birth_date"])
+    singles = share(area, lambda r: r["relationship_status"] in LOOKING)
+    singles_all = share(everyone, lambda r: r["relationship_status"] in LOOKING)
+    same_age = share(area, lambda r: r["age_group"] == my_age)
+    same_age_all = share(everyone, lambda r: r["age_group"] == my_age)
+    interests: dict[str, int] = {}
+    for r in area:
+        for i in r["interests"].split(";"):
+            if i:
+                interests[i] = interests.get(i, 0) + 1
+    top_interests = [INTERESTS.get(k, k) for k, _ in sorted(interests.items(), key=lambda kv: -kv[1])[:3]]
+
+    # Sicherheit: Einbrüche/Diebstähle der letzten 12 Monate je 100 Kunden, Region vs. Deutschland
+    incidents = load_incidents()
+    state = profile.get("federal_state", "")
+    crime_region = crime_all = 0.0
+    if not incidents.empty:
+        recent = incidents[(pd.Timestamp(TODAY) - incidents["incident_date"]).dt.days <= 365]
+        theft = recent[recent["group"] == "Einbruch & Diebstahl"]
+        n_state = sum(1 for r in everyone if r["federal_state"] == state) or 1
+        crime_region = 100 * len(theft[theft["region"] == state]) / n_state
+        crime_all = 100 * len(theft) / max(n_all, 1)
+    disasters = load_disasters()
+    nearby = 0
+    if not disasters.empty:
+        d = disasters[(disasters["country"] == "DE") & disasters["status"].isin(["active", "forecast"])]
+        nearby = int((d["region"] == state).sum())
+    try:
+        import sys as _s
+        if str(ROOT) not in _s.path:
+            _s.path.insert(0, str(ROOT))
+        import forecast as fc
+        trend = fc.trend_label("einbrueche", state) if state in fc.regions() else ""
+    except Exception:  # noqa: BLE001
+        trend = ""
+
+    return {
+        "label": label, "n": n, "state": state, "my_age": my_age,
+        "singles": singles, "singles_all": singles_all,
+        "same_age": same_age, "same_age_all": same_age_all,
+        "top_interests": top_interests,
+        "crime_region": crime_region, "crime_all": crime_all, "crime_trend": trend,
+        "nearby_disasters": nearby,
+    }
 
 
 # ------------------------------------------------------------

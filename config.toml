@@ -125,6 +125,13 @@ when = "risk('leitungswasser') > 0.08 and not has('wassersensor')"
 text = "Leitungswasserrisiko {risk('leitungswasser'):.0%}, Treiber: {', '.join(drivers('leitungswasser'))}"
 
 [[recommendations]]
+product  = "Umzugs-Check"
+category = "gap"
+priority = 1
+when = "days_since('umzug') is not None and days_since('umzug') < 120"
+text = "Umzug vor {days_since('umzug')} Tagen gemeldet: Versicherungssumme, Gefährdungszone und Elementarschutz für die neue Adresse prüfen"
+
+[[recommendations]]
 product  = "Hausrat-Summe bald prüfen"
 category = "gap"
 priority = 3

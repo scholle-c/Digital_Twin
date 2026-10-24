@@ -11,8 +11,8 @@ from datetime import date
 
 import streamlit as st
 
-from core.data import INTERESTS, OCCUPATIONS, RELATIONSHIP, TODAY
-from core.state import edit_section, navigate, save_profile
+from core.data import EVENT_LABELS, FEDERAL_STATES, INTERESTS, OCCUPATIONS, RELATIONSHIP, TODAY, life_events_of
+from core.state import edit_section, navigate, report_life_event, save_profile
 from ui.components import badge, esc, icon, page_header, render_html
 
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -38,6 +38,7 @@ def render(ctx: dict) -> None:
         _personal(profile)
     with right:
         _household(profile)
+        _life_events(profile)
         _preferences(profile)
 
 
@@ -175,6 +176,40 @@ def _household(profile: dict) -> None:
             st.multiselect("Interessen", sorted(set(INTEREST_OPTIONS) | set(profile["interests"])),
                            profile["interests"], key="pf_interests")
             _form_buttons(_household_changes)
+
+
+# Abschnitt „Lebensereignisse“: gemeldete Ereignisse und Formular für ein neues (z. B. Umzug).
+def _life_events(profile: dict) -> None:
+    """Zeigt die gemeldeten Lebensereignisse und erlaubt, ein neues zu melden."""
+    with st.container(key="sec_events"):
+        render_html('<div class="dt-card-head"><div><h3 class="dt-h3">Lebensereignisse</h3>'
+                    '<small class="dt-muted">Was sich bei Ihnen verändert hat – Ihr Digital Twin passt die Empfehlungen an</small></div></div>')
+        events = life_events_of(profile["customer_id"])
+        _fields([(e["date"].strftime("%d.%m.%Y"), e["label"]) for e in events[:5]] or [("Bisher", "keine Ereignisse gemeldet")])
+        if not st.session_state.get("event_form_open"):
+            st.button("Ereignis melden", key="event_open", icon=":material/add_circle:",
+                      on_click=lambda: st.session_state.update(event_form_open=True))
+            return
+        event_type = st.selectbox("Was ist passiert?", list(EVENT_LABELS), format_func=lambda k: EVENT_LABELS[k], key="ev_type")
+        with st.form("form_event"):
+            event_date = st.date_input("Wann?", TODAY, max_value=TODAY, format="DD.MM.YYYY", key="ev_date")
+            new_postal = new_city = new_state = ""
+            if event_type == "umzug":
+                c1, c2 = st.columns([1, 2])
+                new_postal = c1.text_input("Neue PLZ *", key="ev_postal")
+                new_city = c2.text_input("Neuer Ort *", key="ev_city")
+                states = FEDERAL_STATES
+                current = profile.get("federal_state", "Bayern")
+                new_state = st.selectbox("Bundesland", states, states.index(current) if current in states else 1, key="ev_state")
+            save_col, cancel_col = st.columns(2)
+            submitted = save_col.form_submit_button("Speichern", type="primary", icon=":material/check:")
+            cancel_col.form_submit_button("Abbrechen", on_click=lambda: st.session_state.update(event_form_open=False))
+        if submitted:
+            if event_type == "umzug" and (not re.fullmatch(r"\d{5}", new_postal.strip()) or not new_city.strip()):
+                st.error("Für einen Umzug bitte neue PLZ (5 Ziffern) und Ort angeben.")
+            else:
+                report_life_event(event_type, event_date, new_postal.strip(), new_city.strip(), new_state)
+                st.rerun()
 
 
 # Abschnitt „Präferenzen & Kommunikation“.
